@@ -1,0 +1,251 @@
+#!/usr/bin/perl -W
+use DBI;
+use strict;
+
+sub process_channel($$);
+sub process_pid($$$);
+
+my $DBHostName = "localhost";
+my $DBUserName = "mythtv";
+my $DBName = "mythconverg";
+my $DBPassword = "";
+
+open(FILE,"/etc/mythtv/mysql.txt") or die "Cannot open file: $!";
+while (<FILE>) {
+	s/#.*$//g;
+	next if (/^\s*$/);
+
+	if (/DBHostName=(.*)/) {
+		$DBHostName=$1;
+	} elsif (/DBUserName=(.*)/) {
+		$DBUserName=$1;
+	} elsif (/DBName=(.*)/) {
+		$DBName=$1;
+	} elsif (/DBPassword=(.*)/) {
+		$DBPassword=$1;
+	}
+}
+close(FILE) or die "Cannot close file: $!";
+
+my %mapping;
+open(FILE,"sync-channels-myth.conf") or die "Cannot open file: $!";
+while (<FILE>) {
+	s/#.*$//g;
+	next if (/^\s*$/);
+
+	chomp;
+
+	my ($channel_name,$myth_name) = split /:/;
+	$mapping{$channel_name} = $myth_name;
+}
+close(FILE) or die "Cannot close file: $!";
+
+my $dsn = "dbi:mysql:".$DBName.":".$DBHostName;
+my $dbh = DBI->connect($dsn,$DBUserName, $DBPassword);
+if (!defined($dbh)) {
+	die "Can't connect to $dsn: $DBI::errstr";
+}
+
+my %processed;
+while (<>) {
+	s/#.*$//g;
+	next if (/^\s*$/);
+
+	chomp;
+
+	my %values;
+	
+	($values{"name"},$values{"freq"},
+		$values{"inversion"},$values{"bandwidth"},
+		$values{"fec_lp"},$values{"fec_hp"},
+		$values{"constellation"},
+		$values{"transmission_mode"},$values{"guard"},
+		$values{"hierarchy"},
+		$values{"video_pid"},$values{"audio_pid"},
+		$values{"teletext_pid"})
+			= split /:/;
+
+	my $name = $values{"name"};
+	my $myth_name = $mapping{$name};
+	next if (!defined($myth_name));
+
+	if (0) {
+		print "Name: ".$values{"name"}." ($myth_name)\n";
+		print "Frequency: ".$values{"freq"}."\n";
+		print "Inversion: ".$values{"inversion"}."\n";
+		print "Bandwidth: ".$values{"bandwidth"}."\n";
+		print "Fec_lp: ".$values{"fec_lp"}."\n";
+		print "Fec_hp: ".$values{"fec_hp"}."\n";
+		print "Constellation: ".$values{"constellation"}."\n";
+		print "Transmission Mode: ".$values{"transmission_mode"}."\n";
+		print "Guard: ".$values{"guard"}."\n";
+		print "Hierarchy: ".$values{"hierarchy"}."\n";
+		print "PIDs: ".
+			$values{"video_pid"}.",".
+			$values{"audio_pid"}.",".
+			$values{"teletext_pid"}."\n";
+	}
+
+	my $sth;
+
+	# START FIXME
+	if ($values{"inversion"} eq "INVERSION_OFF") {
+	  $values{"inversion"} = 0
+	} else {
+          die "inversion ".$values{"inversion"}." not understood";
+	}
+	if ($values{"bandwidth"} eq "BANDWIDTH_7_MHZ") {
+	  $values{"bandwidth"} = 7
+	} else {
+          die "bandwidth ".$values{"bandwidth"}." not understood";
+	}
+	$values{"fec_lp"} = "auto";
+	$values{"fec_hp"} = "auto";
+	$values{"constellation"} = "auto";
+	$values{"transmission_mode"} = "a";
+	$values{"guard"} = "auto";
+	# END FIXME
+
+	$sth = $dbh->prepare( "SELECT chanid ".
+			      "FROM channel ".
+			      "WHERE chanid='$myth_name'" );
+	if (!defined($sth)) {
+		die "Can't prepare statement: $DBI::errstr";
+	}
+
+	my $rc = $sth->execute
+		or die "Can't execute statement: $DBI::errstr";
+
+	while (my ($chanid) = $sth->fetchrow_array) {
+		process_channel($chanid,\%values);
+		$processed{$chanid}++;
+        }
+	die $sth->errstr if $sth->err;
+
+	print "\n";
+}
+
+# TODO: delete channels in dvb_channel that aren't in $processed???
+# TODO: Warn if processed >= 1? Means same channel was processed twice.
+
+$dbh->disconnect;
+
+sub process_channel($$)
+{
+	my ($chanid,$values) = @_;
+
+	my $sth;
+	$sth = $dbh->prepare( "SELECT chanid ".
+			      "FROM dvb_channel ".
+			      "WHERE chanid='$chanid'" );
+	if (!defined($sth)) {
+		die "Can't prepare statement: $DBI::errstr";
+	}
+
+	my $rc = $sth->execute
+		or die "Can't execute statement: $DBI::errstr";
+
+	my $rows = $sth->rows;
+
+	die $sth->errstr if $sth->err;
+	$sth = undef;
+
+	my $statement;
+	# BEGIN FIXME
+	if ($rows == 0) {
+		$statement = "INSERT INTO dvb_channel(".
+			"chanid,".
+			"service_id,networkid,providerid,transportid,".
+			"frequency,inversion,".
+			"symbolrate,".
+			"fec,".
+			"polarity,satid,modulation,".
+			"bandwidth,".
+			"lp_code_rate,transmission_mode,guard_interval,".
+			"hierarchy,pmtcache) ".
+			"VALUES ($chanid, ".
+			"'', '', '', '', ".
+			"'".$values->{"freq"}."', ".
+			"'".$values->{"inversion"}."', ".
+			"'0', ".
+			"'".$values->{"fec_hp"}."', ".
+			"'h', '0', 'auto', ".
+			"'".$values->{"bandwidth"}."', ".
+			"'".$values->{"fec_lp"}."', ".
+			"'".$values->{"transmission_mode"}."', ".
+			"'".$values->{"guard"}."', ".
+			"'".$values->{"hierarchy"}."', ".
+			"'')";
+	} else {
+		$statement = "UPDATE dvb_channel SET ".
+			"chanid=$chanid, ".
+			"serviceid='', ".
+			"networkid='', ".
+			"providerid='', ".
+			"transportid='', ".
+			"frequency='".$values->{"freq"}."', ".
+			"inversion='".$values->{"inversion"}."', ".
+			"symbolrate='0', ".
+			"fec='".$values->{"fec_hp"}."', ".
+			"polarity='h', ".
+			"satid='0', modulation='auto', ".
+			"bandwidth='".$values->{"bandwidth"}."', ".
+			"lp_code_rate='".$values->{"fec_lp"}."', ".
+			"transmission_mode='".$values->{"transmission_mode"}.
+			"', ".
+			"guard_interval='".$values->{"guard"}."', ".
+			"hierarchy='".$values->{"hierarchy"}."', ".
+			"pmtcache='' ".
+			"WHERE chanid='$chanid'";
+	}
+	# END FIXME
+
+
+	print $statement;
+	print "\n";
+	
+	process_pid($chanid, $values->{"audio_pid"}, "a");
+	process_pid($chanid, $values->{"video_pid"}, "v");
+	process_pid($chanid, $values->{"teletext_pid"}, "t");
+}
+
+sub process_pid($$$)
+{
+	my ($chanid,$pid,$type) = @_;
+
+	my $sth;
+	$sth = $dbh->prepare( "SELECT chanid ".
+			      "FROM dvb_pids ".
+			      "WHERE chanid='$chanid' AND type='$type'" );
+	if (!defined($sth)) {
+		die "Can't prepare statement: $DBI::errstr";
+	}
+
+	my $rc = $sth->execute
+		or die "Can't execute statement: $DBI::errstr";
+
+	my $rows = $sth->rows;
+
+	die $sth->errstr if $sth->err;
+	$sth = undef;
+
+	my $statement;
+	if ($rows == 0 && $pid !=0) {
+		$statement = "INSERT INTO dvb_pids($chanid,$pid,$type)".
+			     "VALUES ($chanid, $pid, $type)";
+	} elsif ($rows > 0 && $pid !=0) {
+		$statement = "UPDATE dvb_channel SET ".
+		             "pid=$pid ".
+			     "WHERE chanid='$chanid' AND $type='$type'";
+	} elsif ($rows > 0) {
+		$statement = "DELETE WHERE chanid='$chanid' AND $type='$type'";
+	} else {
+		$statement = undef;
+	}
+
+
+	if (defined($statement)) {
+		print $statement;
+		print "\n";
+	}
+}
