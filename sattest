@@ -1,0 +1,24 @@
+#!/bin/sh
+
+while true; do
+  if ps `cat /var/run/squid.pid` | grep -q squid;
+  then
+    running=1
+  else
+    running=0
+  fi
+
+  if fping -q -t1000 -r3 202.12.133.10; then
+    if [ $running -eq 0 ]; then
+       echo `date`: link is up;
+       /etc/init.d/squid start
+    fi
+  else
+    if [ $running -eq 1 ]; then
+       echo `date`: link is down;
+       /etc/init.d/squid stop
+    fi
+  fi
+
+  sleep 60
+done
