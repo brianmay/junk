@@ -1,0 +1,37 @@
+#!/bin/sh -ex
+
+for USER in `cat /etc/passwd | cut -f1 -d':'`; 
+do
+
+	HOMEDIR=`getent passwd $USER | cut -f6 -d':'`
+
+	if [ ! -d $HOMEDIR ]
+	then
+	  echo $USER has non-existant homedir of $HOMEDIR
+	else
+
+	  cd $HOMEDIR
+
+	  if [ -f .qmail ]
+	  then
+	    if [ "`cat .qmail`" == './Maildir/' ]
+	    then
+	    	echo -n "";
+	    elif [ ! -f .forward ]
+	    then
+	      echo $USER has .qmail file but no .forward.
+	      echo ---- OLD .qmail ----
+	      cat .qmail
+	      echo ---- NEW .forword ----
+	      SED_MAILDIR=`echo $HOMEDIR/Maildir/ | sed 's/\//\\\\\//g'`
+	      cat .qmail | sed "s/^\.\/Maildir\//$SED_MAILDIR/;s/^&//" > .forward
+	      cat .forward
+	      echo ----
+	    fi
+	  fi
+	  if [ -f .forward ]
+	  then
+	    echo $PWD/.forward | setfiles -s -v /etc/selinux/file_contexts/file_contexts
+	  fi
+	fi
+done

@@ -1,0 +1,114 @@
+#!/bin/sh -e
+
+do_nested_user() {
+#echo "do_nested_user $*"
+local USER=$1
+
+local TEMP=`echo $USER | sed -n s/^\&//p`
+if [ "$TEMP" != "" ]; then USER=$TEMP; fi;
+
+local homedir=`getent passwd $USER | cut -f6 -d':'`
+if [ "$homedir" = "" ]
+then
+	echo "WARNING: Cannot find homedir for $USER" 1>&2;
+	return
+fi
+
+local SWD=`pwd`
+cd $homedir
+for i in .qmail
+do
+	do_user_qmail $USER $i
+done
+cd $SWD
+}
+
+do_user_qmail() {
+#echo "do_user_qmail $*"
+
+local USER=$1
+local FILE=$2
+local j
+
+if [ ! -f $FILE ]
+then
+	echo -n "$SEP$USER"
+	SEP=", ";
+	return
+fi
+
+{
+	while read j
+	do
+		if [ $j = "./Maildir/" ]
+		then
+			echo -n "$SEP$USER"
+			SEP=", ";
+		elif echo $j | grep -s @ > /dev/null
+		then
+			j=`echo $j | sed s/^\&//`
+
+			echo -n "$SEP$j"
+			SEP=", ";
+		else
+			do_nested_user $j
+		fi
+	done
+} < $i
+}
+
+do_user() {
+#echo "do_user $*"
+
+local USER=$1
+local DOMAIN=$2
+local homedir=`getent passwd $USER | cut -f6 -d':'`
+local i
+
+if [ "$homedir" = "" ]
+then
+	echo "ERROR: Cannot find homedir for $USER" 1>&2;
+	exit 1
+fi
+
+local SWD=`pwd`
+cd $homedir
+for i in .qmail-*
+do
+	local postfix=`echo $i | sed -n s/.qmail-//p`
+
+	if [ "$postfix" != "default" ]
+	then
+		echo -n "$postfix@$DOMAIN ";
+		SEP="";
+		do_user_qmail $USER $i
+		echo
+	fi
+done
+
+i=".qmail-default"
+if [ -f "$i" ]
+then
+	echo -n "@$DOMAIN ";
+	SEP=""
+	do_user_qmail $USER $i
+	echo
+fi
+
+cd $SWD
+}
+
+for x in $*
+do
+	DOMAIN=$x
+	USER=`grep ^$DOMAIN /etc/qmail/virtualdomains  | sed -n s/^.*://p`
+	if [ "$USER" = "" ]
+	then
+		echo "ERROR: Cannot find /etc/qmail/virtualdomains entry for $DOMAIN" 1>&2;
+		exit 1
+	fi
+
+	echo $DOMAIN anything
+	do_user $USER $DOMAIN
+	echo
+done
