@@ -1,0 +1,13 @@
+#!/bin/sh -ex
+SOURCE=$1
+SOURCE_DIR=`tla whereis-archive $SOURCE`
+MIRROR=$1-MIRROR
+MIRROR_DIR=$2
+
+tla make-archive --listing --signed --mirror $SOURCE $MIRROR_DIR
+tla archive-mirror $SOURCE
+
+rm $MIRROR_DIR/=meta-info/mirror
+tla archive-fixup -A $MIRROR
+
+tla register-archive -d $MIRROR
