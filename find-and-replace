@@ -1,0 +1,16 @@
+#!/bin/sh -e
+
+read IN
+SPEC=`echo $IN | sed 's/\./\\\./g; s/ /\\\|/g'`
+
+for i in `tla inventory --source`;
+do
+        cat $i | sed 's/libarch\/\('$SPEC'\)/libarch-cmds\/\1/' > $i.new;
+        if diff $i $i.new;
+        then
+                rm -f $i.new
+        else
+                cat $i.new > $i;
+                rm -f $i.new
+        fi
+done
