@@ -1,0 +1,32 @@
+declare
+        type Child is (Denis, Harvey, Louise, Timmy, Tracy);
+        type Mother is (Anita, Glenda, Laura, Mandy, Suzanne);
+        type Food is (Chocolate, Icecream, Lollipop, Mints, Toffee);
+        type Activity is (Climbing, Yacht, Sandpit, Seesaw, Swings);
+begin
+        -- Rule 1
+        Set_True (Harvey,  Unknown, Unknown,   Yacht);
+
+        -- Rule 2
+        Set_True (Unknown, Glenda,  Toffee,    Unknown);
+
+        -- Rule 3
+        Set_True (Unknown, Mandy,   Unknown,   Climbing);
+        Set_False(Unknown, Mandy,   Icecream,  Unknown);
+        Set_False(Timmy,   Unknown, Icecream,  Unknown);
+        Set_False(Timmy,   Mandy,   Unknown,   Unknown);
+
+        -- Rule 4
+        Set_True (Louise,  Unknown, Chocolate, Unknown);
+
+        -- Rule 5
+        Set_False(Denis,   Unknown, Unknown,   Sandpit);
+        Set_True (Denis,   Laura,   Unknown,   Unknown);
+        Set_False(Tracy,   Anita,   Unknown,   Unknown);
+
+        -- Rule 6
+        Set_True (Unknown, Unknown, Lollipop,  Swings);
+
+        -- Rule 7
+        Set_False(Unknown, Suzanne, Unknown,   Seesaw);
+end;

@@ -1,0 +1,212 @@
+#!/usr/bin/perl -w
+use strict;
+
+my @type_order = ();
+my %type_value_order = ();
+my %types = ();
+
+my $table;
+
+
+sub set($$$$$) {
+        my ($x_type, $y_type, $x_value, $y_value, $value) = @_;
+
+        print "set table->{$x_type}{$y_type}{$x_value}{$y_value} = $value\n";
+
+        my $oldvalue = $table->{$x_type}{$y_type}{$x_value}{$y_value};
+        if (defined($oldvalue) and $oldvalue ne $value) {
+                die "$x_type=$x_value,$y_type=$y_value already set $oldvalue";
+        }
+        $table->{$x_type}{$y_type}{$x_value}{$y_value} = $value;
+}
+
+sub set_with_rule($$$$$) {
+        my ($x_type, $y_type, $x_value, $y_value, $value) = @_;
+
+        if ($x_value ne "Unknown" and $y_value ne "Unknown") {
+                print "rul table->{$x_type}{$y_type}{$x_value}{$y_value} = $value\n";
+                if ($value eq "True") {
+                        print "---------\n";
+                        foreach my $x_temp (@{$type_value_order{$x_type}}) {
+                                next if ($x_temp eq $x_value);
+                                set($x_type,$y_type,$x_temp,$y_value,"False");
+                        }
+                        foreach my $y_temp (@{$type_value_order{$y_type}}) {
+                                next if ($y_temp eq $y_value);
+                                set($x_type,$y_type,$x_value,$y_temp,"False");
+                        }
+                        print "=========\n";
+               }
+
+               set($x_type,$y_type,$x_value,$y_value,$value);
+        }
+}
+
+sub insert_item($$) {
+        my ($value,$params) = @_;
+
+        my $x=0;
+        foreach my $x_type (@type_order) {
+
+                my $y=0;
+                foreach my $y_type (@type_order) {
+                        if ($x_type eq $y_type) {
+                                $y=$y+1;
+                                next;
+                        }
+
+                        my $x_value = $params->[$x];
+                        my $y_value = $params->[$y];
+
+                        set_with_rule($x_type,$y_type,$x_value,$y_value,$value);
+                        $y = $y + 1;
+                }
+                $x = $x + 1;
+        }
+}
+
+sub copy($$$$) {
+        my ($src_type, $src_value, $dst_type, $dst_value) = @_;
+
+        print "--- copy($src_type, $src_value, $dst_type, $dst_value) ---\n";
+        foreach my $n_type (@type_order) {
+                foreach my $n_value (@{$type_value_order{$n_type}}) {
+                        next if ($src_type eq $n_type);
+                        next if ($dst_type eq $n_type);
+
+                        my $value;
+
+                        print "--- +++ $src_type=$src_value, $n_type=$n_value\n";
+
+                        $value = $table->{$n_type}{$src_type}{$n_value}{$src_value};
+                        if (!defined($value)) {
+                                $value = $table->{$src_type}{$n_type}{$src_value}{$n_value};
+                        }
+
+                        if (defined($value)) {
+                                set_with_rule($n_type,$dst_type,$n_value,$dst_value,$value);
+                                set_with_rule($dst_type,$n_type,$dst_value,$n_value,$value);
+                        }
+                }
+        }
+        print "--- end copy ---\n";
+}
+
+sub update_connections() {
+        foreach my $x_type (@type_order) {
+
+                foreach my $y_type (@type_order) {
+                        next if ($x_type eq $y_type);
+
+                        foreach my $x_value (@{$type_value_order{$x_type}}) {
+                                foreach my $y_value (@{$type_value_order{$y_type}}) {
+                                        my $value = $table->{$x_type}{$y_type}{$x_value}{$y_value};
+
+                                        if (defined($value) and $value eq "True") {
+                                                print "$x_type=$x_value,$y_type=$y_value\n";
+                                                copy($x_type,$x_value,$y_type,$y_value);
+                                                copy($y_type,$y_value,$x_type,$x_value);
+                                        }
+                                }
+                        }
+                }
+        }
+}
+
+sub output() {
+        my $y=0;
+        foreach my $y_type (@type_order) {
+
+                my $x=0;
+                foreach my $x_type (@type_order) {
+                        if ($x == $y) {
+                                $x=$x+1;
+                                next;
+                        }
+
+                        print "-----------------\n";
+                        print "$x_type / $y_type\n";
+                        print "-----------------\n";
+
+                        printf "%10s ","";
+                        foreach my $x_value (@{$type_value_order{$x_type}}) {
+                                printf("%10s ",$x_value);
+                        }
+                        print "\n";
+
+                        foreach my $y_value (@{$type_value_order{$y_type}}) {
+                                printf("%10s ",$y_value);
+                                foreach my $x_value (@{$type_value_order{$x_type}}) {
+                                        my $value = $table->{$x_type}{$y_type}{$x_value}{$y_value};
+
+                                        if (defined($value)) {
+                                                printf "%10s ",$value;
+                                        } else {
+                                                printf "%10s ","";
+                                        }
+                                }
+                                print "\n";
+                        }
+                        $x = $x + 1;
+                }
+                $y = $y + 1;
+        }
+}
+my $phase = undef;
+while (<>) {
+        chomp;
+
+        s/--.*$//;
+        next if (/^\s*$/);
+
+        if (!defined($phase)) {
+                if (/^\s*declare\s*$/) {
+                        $phase = "declare";
+                } else {
+                        die "Illegal input";
+                }
+        } elsif ($phase eq "declare") {
+                if (/^\s*begin\s*$/) {
+                        $phase = "body";
+                } elsif (/^\s*type\s+(\S*)\s+is\s+\((.*)\);\s*$/) {
+                        push(@type_order,$1);
+                        my @values = split(/\s*,\s*/, $2);
+                        $type_value_order{$1} = [ @values ];
+                        $types{$1} = { };
+                        foreach my $value (@values) {
+                                $types{$1}{$value} = 1;
+                        }
+                } else {
+                        die "Illegal input in declaration";
+                }
+        } elsif ($phase eq "body") {
+                if (/^\s*end;\s*$/) {
+                        $phase = "end";
+                } elsif (/^\s*Set_(True|False)\s*\((.*)\);\s*$/) {
+                        my @params = split(/\s*,\s*/, $2);
+
+                        if ($#params != $#type_order) {
+                                die "Wrong number of parameters";
+                        }
+
+                        my $i=0;
+                        foreach my $type (@type_order) {
+                                my $given = $params[$i];
+
+                                if ($given ne "Unknown" and !defined($types{$type}{$given})) {
+                                        die "Illegal parameter $given for $type";
+                                }
+
+                                $i=$i+1;
+                        }
+
+                        insert_item($1, \@params);
+                } else {
+                        die "Illegal input in body";
+                }
+        } elsif ($phase eq "end") {
+                        die "Illegal input after end";
+        }
+}
+update_connections();
+output();
