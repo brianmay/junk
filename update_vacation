@@ -1,0 +1,68 @@
+#!/bin/sh -e
+# Update vacation status for user.
+# Note: will destroy any existing .forward and/or .vacation.msg files.
+
+TEMP=`getopt -o '' --long enable,disable -n'update_vacation' -- "$@"`
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+OPERATION=""
+
+while true
+do
+	case "$1" in
+	--enable)
+		OPERATION="enable"
+		shift
+		;;
+	--disable)
+		OPERATION="disable"
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*) echo "Internal error!" ; exit 1 ;;
+	esac
+done
+
+usage() {
+	echo "Usage: update_vacation --enable userid < message" 2>&1
+	echo "Usage: update_vacation --disable userid" 2>&1
+	exit 1
+}
+
+if [ -z $1 ]
+then
+	echo "User not given" 2>&1
+	usage
+fi
+
+PARAM="$1"
+shift
+id "$PARAM" > /dev/null || usage
+
+DIR="/home/$PARAM"
+
+case "$OPERATION" in
+enable)
+	cat > $DIR/.vacation.msg.new
+	echo "$PARAM, \"|/usr/bin/vacation $PARAM\"" > $DIR/.forward.new
+	chown $PARAM $DIR/.vacation.msg.new $DIR/.forward.new
+	chmod 644 $DIR/.vacation.msg.new $DIR/.forward.new
+	mv $DIR/.vacation.msg.new $DIR/.vacation.msg
+	rm -f $DIR/.vacation.db
+	mv $DIR/.forward.new $DIR/.forward
+	;;
+disable)
+	rm -f $DIR/.forward
+	rm -f $DIR/.vacation.db
+	;;
+*)
+	echo "Internal error parameters" 2>&1
+	usage
+	;;
+esac
