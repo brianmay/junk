@@ -3,7 +3,7 @@ use strict;
 
 #$| = 1;
 sub debug {
-#  print @_;
+  print @_;
 }
 
 my %message;
@@ -19,45 +19,89 @@ while (<>) {
     $message{$1}{"nrcpt"} = $4;
     $message{$1}{"amavis"} = {};
   }
-  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=127.0.0.1\[127.0.0.1\], delay=\S+, status=sent \(.*Ok: queued as (\S+)\)/)
+  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=127.0.0.1\[127.0.0.1\], delay=\S+, status=(.*)$/)
   {
-    $message{$1}{"amavis"}{$2} = $3;
+    my $id=$1;
+    my $to=$2;
+    my $status=$3;
+
+    if ($status =~ /^sent \(.*Ok: queued as (\S+)\)$/) {
+      $message{$id}{"amavis"}{$to} = $1;
+    } elsif ($status =~ /sent \(250 .* Ok, discarded, .*\)/) {
+      $message{$id}{"to-discard"}{$to} = $status;
+    } else {
+      die "Message $id to $to amavis status $status not understood";
+    }
   }
-  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=\S+, delay=\S+, status=sent \(.*\)/)
+  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=\S+, delay=\S+, status=(.*)$/)
   {
-    $message{$1}{"to-remote"}{$2} = $3;
+    my $id=$1;
+    my $to=$2;
+    my $status=$3;
+
+    if ($status =~ /^sent /) {
+      $message{$id}{"to-remote"}{$to} = $status;
+    } elsif ($status =~ /^deferred /) {
+      # don't count
+    } elsif ($status =~ /^bounced /) {
+      # don't count
+    } else {
+      die "Message $id to $to remote status $status not understood";
+    }
   }
-  elsif (/postfix\/local\[.*\]: (\S+)+: to=<(\S*)>, relay=local, delay=\S+, status=(\S+)/)
+  elsif (/postfix\/local\[.*\]: (\S+)+: to=<(\S*)>, relay=local, delay=\S+, status=(.*)$/)
   {
-    $message{$1}{"to-local"}{$2} = $3;
+    my $id=$1;
+    my $to=$2;
+    my $status=$3;
+
+    if ($status =~ /^sent /) {
+      $message{$id}{"to-local"}{$to} = $status;
+    } elsif ($status =~ /^deferred /) {
+      # don't count
+    } elsif ($status =~ /^bounced /) {
+      # don't count
+    } else {
+      die "Message $id to $to local status $status not understood";
+    }
   }
 }
 
 my %topmessage = %message;
 
 foreach my $i (keys %message) {
-#  debug STDERR "==============",$i,$message{$i}{"from"},"===\n";
-#  debug $message{$i}{"from"}, " ";
-#  debug $message{$i}{"size"}, " ";
-#  debug $message{$i}{"nrcpt"}, "\n";
+  debug "==============",$i,",",,$message{$i}{"from"},"===\n";
+  debug $message{$i}{"from"}, " ";
+  debug $message{$i}{"size"}, " ";
+  debug $message{$i}{"nrcpt"}, "\n";
   foreach my $j (keys %{$message{$i}{"amavis"}}) {
     my $id = $message{$i}{"amavis"}{$j};
-#    debug " - ",$id, "\n";
+    debug " - ",$id, "\n";
     delete $topmessage{$id};
   }
 }
 
 debug "-----------\n";
 my @fields = ( "sent msgs", "sent nrcpt", "sent bytes",
-	   "recv msgs", "recv bytes" );
+	   "recv msgs", "recv bytes", "disc msgs", "disc bytes" );
 
 my %totals;
 foreach my $id (keys %topmessage) {
   my %msg = get($id);
+
+  debug "Returned: ";
+  foreach my $j (@fields) {
+    if (defined($msg{$j})) {
+      debug "$j=",$msg{$j},",";
+    }
+  }
+  debug "\n";
   
   foreach my $j (@fields) {
     if (defined($msg{"user"})) {
+      print $msg{"user"}," ",$j,"+=","\n";
       if (defined($msg{$j})) {
+        print $msg{"user"}," ",$j,"+=",$msg{$j},"\n";
         $totals{$msg{"user"}}{$j} += $msg{$j};
       }
     }
@@ -66,7 +110,7 @@ foreach my $id (keys %topmessage) {
 
 debug "-----------\n";
 
-printf "%16s %10s %10s %10s %10s %10s\n", "user",@fields;
+printf "%16s %10s %10s %10s %10s %10s %10s %10s\n", "user",@fields;
 
 foreach my $i (keys %totals) {
   printf "%16s", $i;
@@ -78,14 +122,38 @@ foreach my $i (keys %totals) {
 
 # --------------------------------
 
+sub get_local_user($) {
+  my ($email) = @_;
+
+  if ($email =~ /^(\S+)\@snoopy\.apana\.org\.au$/i) {
+    my $user = lc($1);
+    return $user;
+  } else {
+    return undef;
+  }
+}
+
+sub count_to_discard($$$$) {
+  my ($totals,$from,$to,$size) = @_;
+
+  my $user = get_local_user($to);
+  if (defined($user)) {
+    $totals->{"user"} = $user;
+    $totals->{"disc bytes"} += $size;
+    $totals->{"disc msgs"} += 1;
+  }
+}
+
 sub count_to_local($$$$) {
   my ($totals,$from,$to,$size) = @_;
 
-  if ($to =~ /^(\S+)\@sjl\.com\.au$/i) {
-    $totals->{"user"} = $1;
+  my $user = get_local_user($to);
+  if (defined($user)) {
+    $totals->{"user"} = $user;
   }
 
-  if ($from !~ /^(\S+)\@sjl\.com\.au$/i) {
+  $user = get_local_user($from);
+  if (!defined($user)) {
     $totals->{"recv bytes"} += $size;
     $totals->{"recv msgs"} += 1;
   }
@@ -94,8 +162,9 @@ sub count_to_local($$$$) {
 sub count_to_remote($$$$) {
   my ($totals,$from,$to,$size) = @_;
 
-  if ($from =~ /^(\S+)\@sjl\.com\.au$/i) {
-    $totals->{"user"} = $1;
+  my $user = get_local_user($from);
+  if (defined($user)) {
+    $totals->{"user"} = $user;
     $totals->{"sent bytes"} += $size;
     $totals->{"sent msgs"} = 1;
     $totals->{"sent nrcpt"} += 1;
@@ -117,8 +186,13 @@ sub get($) {
   debug $message{$id}{"nrcpt"}, "\n";
   foreach my $j (keys %{$message{$id}{"amavis"}}) {
     my $subid = $message{$id}{"amavis"}{$j};
-    debug " "x($level*2), "AMAVIS: $j\n";
+    debug " "x($level*2), "AMAVIS: $j $subid\n";
     %msg=get($subid);
+  }
+  foreach my $j (keys %{$message{$id}{"to-discard"}}) {
+    debug " "x($level*2), "DISCARD $j\n";
+    debug " "x($level*2), "count_to_discard(".$message{$id}{"from"}.",$j,".$message{$id}{"size"}.")\n";
+    count_to_discard(\%msg,$message{$id}{"from"},$j,$message{$id}{"size"});
   }
   foreach my $j (keys %{$message{$id}{"to-local"}}) {
     debug " "x($level*2), "LOCAL: $j\n";
