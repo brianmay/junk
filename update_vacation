@@ -41,17 +41,25 @@ then
 	usage
 fi
 
-PARAM="$1"
+ID="$1"
 shift
-id "$PARAM" > /dev/null || usage
 
-DIR="/home/$PARAM"
+IDLINE=`getent passwd $ID` || ( echo "Unknown User $ID" 2>&1; exit 255 )
+DIR=`echo $IDLINE | gawk -F: '{ print $6; }'`
+NAME=`echo $IDLINE | gawk -F: '{ print $5; }'`
 
 case "$OPERATION" in
 enable)
-	cat > $DIR/.vacation.msg.new
-	echo "$PARAM, \"|/usr/bin/vacation $PARAM\"" > $DIR/.forward.new
-	chown $PARAM $DIR/.vacation.msg.new $DIR/.forward.new
+        cat << EOF > $DIR/.vacation.msg.new
+From: $NAME <$ID@nelsonwineco.com.au>
+Subject: Out of the office
+Delivered-By-The-Graces-Of: The Vacation program
+Precedence: bulk
+
+EOF
+        sed "s/NAME/$NAME/g; s/ID/$ID/g" >> $DIR/.vacation.msg.new
+	echo "$ID, \"|/usr/bin/vacation $ID\"" > $DIR/.forward.new
+	chown $ID $DIR/.vacation.msg.new $DIR/.forward.new
 	chmod 644 $DIR/.vacation.msg.new $DIR/.forward.new
 	mv $DIR/.vacation.msg.new $DIR/.vacation.msg
 	rm -f $DIR/.vacation.db
