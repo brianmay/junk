@@ -1,0 +1,67 @@
+#!/usr/bin/perl -W
+use strict;
+use File::stat;
+use Compress::Zlib;
+
+my %counter;
+
+opendir(DIR,"/var/lib/amavis/virusmails") or die "Cannot open dir: $!";
+while (my $file=readdir(DIR)) {
+        next if ($file eq ".");
+        next if ($file eq "..");
+
+        my $date;
+        my $type;
+        my $size;
+
+        if ($file =~ /^spam-[a-f\d]+-(\d+)-/) {
+                $date=$1;
+                $type = "spam";
+
+                my $gz = gzopen("/var/lib/amavis/virusmails/".$file, "rb")
+                                    or die "Cannot open $file: $gzerrno\n" ;
+                my $bytes;
+                $size = 0;
+                while (true) {
+                        $bytes = $gz->gzreadline($_);
+                        last if ($bytes <= 0);
+                        $size = $size + $bytes;
+                }
+                die "Error reading from $file: $gzerrno\n"
+                        if $gzerrno != Z_STREAM_END ;
+                $gz->gzclose();
+        } elsif ($file =~ /^virus-(\d+)-/) {
+                $date=$1;
+                $type = "virus";
+                my $sb = stat("/var/lib/amavis/virusmails/".$file)
+                        or die "Cannot stat $file: $!";
+                $size = $sb->size;
+        } else {
+                print "???? $file\n";
+        }
+
+        my $year;
+        my $month;
+        my $day;
+        if (defined($date)) {
+                ($year,$month,$day) = ($date =~ /(....)(..)(..)/);
+        }
+
+        my $sb = stat("/var/lib/amavis/virusmails/".$file)
+                or die "Cannot stat $file: $!";
+
+        $counter{$year}{$month}{$day}{$type} += $size;
+}
+closedir(DIR);
+
+foreach my $year (sort keys %counter) {
+        foreach my $month (sort keys %{$counter{$year}}) {
+                foreach my $day (sort keys %{$counter{$year}{$month}}) {
+                        foreach my $type (sort keys %{$counter{$year}{$month}{$day}}) {
+                                my $count = $counter{$year}{$month}{$day}{$type};
+                                printf "%04d-%02d-%02d %5s %9d\n",
+                                        $year,$month,$day,$type,$count;
+                        }
+                }
+        }
+}
