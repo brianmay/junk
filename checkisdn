@@ -1,0 +1,46 @@
+#!/bin/sh
+
+echo `date` "Starting"
+if [ -f /tmp/triedisdn ]
+then
+  exit 0
+fi
+touch /tmp/triedisdn
+
+echo `date` "First try"
+for i in 1 2 3 4 5
+do
+  if isdnctrl status ippp0 | grep -q connected 
+  then
+    exit 0
+  fi
+  isdnctrl dial ippp0
+  sleep 60
+done
+
+
+echo `date` "Second try"
+for i in 1
+do
+  if isdnctrl status ippp0 | grep -q connected
+  then
+    exit 0
+  fi
+  /etc/init.d/isdnutils stop
+  sleep 60
+  /etc/init.d/isdnutils start
+  sleep 60
+  isdnctrl dial ippp0
+  sleep 60
+done
+
+echo `date` "Third try"
+for i in 1 2 3 4 5
+do
+  if isdnctrl status ippp0 | grep -q connected
+  then
+    exit 0
+  fi
+  isdnctrl dial ippp0
+  sleep 60
+done

@@ -1,0 +1,1 @@
+@daily amavis /usr/local/sbin/delete_old_amavis_mail

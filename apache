@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/usr/bin/webalizer -p -q -c /etc/webalizer.conf -F apache
+/usr/bin/modlogan -c /etc/modlogan/modlogan.apache.conf < /var/log/apache/refer.log.0 > /dev/null 2>&1

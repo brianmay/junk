@@ -1,0 +1,33 @@
+#!/bin/sh -e
+
+WEBALIZER_CONF="-c /etc/webalizer.conf"
+rm -rf /var/www/log/apache/webalizer/*
+#!rm -rf /var/www/log/apache/modlogan/*
+INDEX=-i
+for i in `ls -tr /var/log/apache/refer.log.*.gz`
+do
+  echo --- $i ---
+  gunzip < $i | webalizer $INDEX ${WEBALIZER_CONF} -
+#!  gunzip < $i | modlogan -c /etc/modlogan/modlogan.apache.conf
+  INDEX=-p
+done
+echo --- /var/log/apache/refer.log.1 ---
+cat /var/log/apache/refer.log.1 | webalizer $INDEX ${WEBALIZER_CONF} -
+#!cat /var/log/apache/refer.log.1 | modlogan -c /etc/modlogan/modlogan.apache.conf
+
+exit 0
+
+WEBALIZER_CONF="-c /etc/webalizer.squid.conf -F squid"
+rm -f /var/www/log/squid/webalizer/*
+#!rm -f /var/www/log/squid/modlogan/*
+INDEX=-i
+for i in `ls -tr /var/log/squid/access.log.*.gz`
+do
+  echo --- $i ---
+  gunzip < $i | webalizer $INDEX ${WEBALIZER_CONF} -
+#!  gunzip < $i | modlogan -c /etc/modlogan/modlogan.squid.conf
+  INDEX=-p
+done
+echo --- /var/log/squid/access.log.1 ---
+cat /var/log/squid/access.log.1 | webalizer $INDEX ${WEBALIZER_CONF} -
+#cat /var/log/squid/access.log.1 | modlogan -c /etc/modlogan/modlogan.squid.conf

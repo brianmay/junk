@@ -1,0 +1,21 @@
+#!/usr/bin/perl -W
+use strict;
+
+my %host;
+while (<>) {
+	my @F=split;
+
+	if ($F[6] =~ /^http:\/\/snoopy/) {
+	}
+	else {
+		my $ip = $F[2];
+		$host{$ip} += $F[1];
+		if ($ip eq "192.168.87.130") {
+  			printf("%s %-15s %9d %6dK %3dM %s\n",localtime($F[0])."",$ip,$host{$ip},$host{$ip}/1000,$host{$ip}/1000000,$F[6]);
+		}
+	}
+}
+
+foreach my $ip (keys %host) {
+  printf("%-15s %9d %6dK %3dM\n",$ip,$host{$ip},$host{$ip}/1000,$host{$ip}/1000000);
+}

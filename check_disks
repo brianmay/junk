@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+(
+	echo "========="
+	echo "= disc0 ="
+	echo "========="
+	smartctl -a /dev/hda
+	echo "========="
+	echo "= disc1 ="
+	echo "========="
+	smartctl -a /dev/hdc
+) | a2ps --center-title="snoopy" -Ma4dj -1 -o/tmp/out.ps

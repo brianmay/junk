@@ -1,0 +1,13 @@
+Revision: junk--devo--0.1--base-0
+Archive: bam@snoopy.apana.org.au--junk-2004
+Creator: Brian May <bam@snoopy.apana.org.au>
+Date: Mon Feb  2 12:40:13 EST 2004
+Standard-date: 2004-02-02 01:40:13 GMT
+Summary: initial import
+New-files: apache check_disks checkisdn cnetwork
+    delete_old_amavis_mail delete_old_amavis_mail.crontab
+    demime processmail statistics tla/tla webalizer
+New-patches: bam@snoopy.apana.org.au--junk-2004/junk--devo--0.1--base-0
+
+
+(automatically generated log message)

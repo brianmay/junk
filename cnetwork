@@ -1,0 +1,49 @@
+#!/usr/bin/perl -W
+use strict;
+
+sub number() {
+	printf "%7s","";
+	printf "  ";
+	foreach my $j (0..15) {
+	  printf "%3d ",$j;
+	  printf "  " if ($j==7);
+	}
+	print "\n";
+}
+
+sub divide() {
+	printf "%7s","";
+	printf " +";
+	foreach my $j (0..15) {
+	  printf "---+";
+	  printf " +" if ($j==7);
+	}
+	print "\n";
+}
+
+sub empty($) {
+	my ($i) = @_;
+
+	if ($i >= 0) {
+		printf "%03d-%03d",$i*16,($i+1)*16-1;
+	} else {
+		printf "%7s","";
+	}
+	printf " +";
+	foreach my $j (0..15) {
+	  print "   +";
+	  print " +" if ($j==7);
+	}
+	print "\n";
+}
+
+number();
+divide();
+foreach my $i (0..15) {
+	empty(-1);	
+	empty($i);	
+	empty(-1);	
+	divide() if ($i==7);
+	number() if ($i==7);
+	divide();
+}

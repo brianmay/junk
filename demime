@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+use MIME::Base64;
+
+for $i (@ARGV) {
+#  print "$i\t\t";
+  @a=split(/-/,$i);
+  foreach $j (@a) {
+    $j =~ s/\..*$//;
+    if ($j =~ /=$/) {
+      print "<",MIME::Base64::decode($j),">";
+    } else {
+      print "<",MIME::Base64::decode($j),">";
+    }
+  }
+  print "\n";
+}

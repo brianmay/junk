@@ -1,0 +1,145 @@
+#!/usr/bin/perl -w
+use strict;
+
+#$| = 1;
+sub debug {
+#  print @_;
+}
+
+my %message;
+
+sub get($);
+
+while (<>) {
+  if (/postfix\/qmgr\[.*\]: (\S+)+: from=<(\S*)>, size=(\S+)+, nrcpt=(\S+)/)
+  {
+    $message{$1} = {};
+    $message{$1}{"from"} = $2;
+    $message{$1}{"size"} = $3;
+    $message{$1}{"nrcpt"} = $4;
+    $message{$1}{"amavis"} = {};
+  }
+  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=127.0.0.1\[127.0.0.1\], delay=\S+, status=sent \(.*Ok: queued as (\S+)\)/)
+  {
+    $message{$1}{"amavis"}{$2} = $3;
+  }
+  elsif (/postfix\/smtp\[.*\]: (\S+)+: to=<(\S*)>, relay=\S+, delay=\S+, status=sent \(.*\)/)
+  {
+    $message{$1}{"to-remote"}{$2} = $3;
+  }
+  elsif (/postfix\/local\[.*\]: (\S+)+: to=<(\S*)>, relay=local, delay=\S+, status=(\S+)/)
+  {
+    $message{$1}{"to-local"}{$2} = $3;
+  }
+}
+
+my %topmessage = %message;
+
+foreach my $i (keys %message) {
+#  debug STDERR "==============",$i,$message{$i}{"from"},"===\n";
+#  debug $message{$i}{"from"}, " ";
+#  debug $message{$i}{"size"}, " ";
+#  debug $message{$i}{"nrcpt"}, "\n";
+  foreach my $j (keys %{$message{$i}{"amavis"}}) {
+    my $id = $message{$i}{"amavis"}{$j};
+#    debug " - ",$id, "\n";
+    delete $topmessage{$id};
+  }
+}
+
+debug "-----------\n";
+my @fields = ( "sent msgs", "sent nrcpt", "sent bytes",
+	   "recv msgs", "recv bytes" );
+
+my %totals;
+foreach my $id (keys %topmessage) {
+  my %msg = get($id);
+  
+  foreach my $j (@fields) {
+    if (defined($msg{"user"})) {
+      if (defined($msg{$j})) {
+        $totals{$msg{"user"}}{$j} += $msg{$j};
+      }
+    }
+  }
+}
+
+debug "-----------\n";
+
+printf "%16s %10s %10s %10s %10s %10s\n", "user",@fields;
+
+foreach my $i (keys %totals) {
+  printf "%16s", $i;
+  foreach my $j (@fields) {
+    printf " %10d",$totals{$i}{$j} || 0;
+  }
+  print "\n";
+}
+
+# --------------------------------
+
+sub count_to_local($$$$) {
+  my ($totals,$from,$to,$size) = @_;
+
+  if ($to =~ /^(\S+)\@sjl\.com\.au$/i) {
+    $totals->{"user"} = $1;
+  }
+
+  if ($from !~ /^(\S+)\@sjl\.com\.au$/i) {
+    $totals->{"recv bytes"} += $size;
+    $totals->{"recv msgs"} += 1;
+  }
+}
+
+sub count_to_remote($$$$) {
+  my ($totals,$from,$to,$size) = @_;
+
+  if ($from =~ /^(\S+)\@sjl\.com\.au$/i) {
+    $totals->{"user"} = $1;
+    $totals->{"sent bytes"} += $size;
+    $totals->{"sent msgs"} = 1;
+    $totals->{"sent nrcpt"} += 1;
+  }
+}
+
+my $level=-1;
+
+sub get($) {
+  my ($id) = @_;
+
+  my %msg = ();
+
+  $level += 1;
+
+  debug " "x($level*2), "New message: ",$id, " ";
+  debug $message{$id}{"from"}, " ";
+  debug $message{$id}{"size"}, " ";
+  debug $message{$id}{"nrcpt"}, "\n";
+  foreach my $j (keys %{$message{$id}{"amavis"}}) {
+    my $subid = $message{$id}{"amavis"}{$j};
+    debug " "x($level*2), "AMAVIS: $j\n";
+    %msg=get($subid);
+  }
+  foreach my $j (keys %{$message{$id}{"to-local"}}) {
+    debug " "x($level*2), "LOCAL: $j\n";
+    debug " "x($level*2), "count_to_local(".$message{$id}{"from"}.",$j,".$message{$id}{"size"}.")\n";
+    count_to_local(\%msg,$message{$id}{"from"},$j,$message{$id}{"size"});
+  }
+  foreach my $j (keys %{$message{$id}{"to-remote"}}) {
+    debug " "x($level*2), "REMOTE: $j\n";
+    debug " "x($level*2), "count_to_remote(".$message{$id}{"from"}.",$j,".$message{$id}{"size"}.")\n";
+    count_to_remote(\%msg,$message{$id}{"from"},$j,$message{$id}{"size"});
+  }
+
+  debug " "x($level*2), "Got: ";
+  foreach my $j (@fields) {
+    if (defined($msg{$j})) {
+      debug "$j=",$msg{$j},",";
+    }
+  }
+  debug "\n";
+
+  $level -= 1;
+
+  return (%msg);
+}

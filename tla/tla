@@ -1,0 +1,7 @@
+OLD=bam@snoopy.apana.org.au--2002
+NEW=bam@snoopy.apana.org.au--2004
+TREE=OpenAtcTests--devo--0.1
+
+tla archive-setup $NEW/$TREE
+tla tag $OLD/$TREE $NEW/$TREE
+tla cacherev $NEW/$TREE--base-0
