@@ -1,0 +1,154 @@
+#!/usr/bin/perl -w
+# (c) 2003 Brian May
+#
+# This package is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 dated June, 1991.
+#
+# This package is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this package; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+# 02111-1307, USA.
+#
+
+use strict;
+use FileHandle;
+use AppConfig;
+use Getopt::Long;
+use Pod::Usage;
+use Proc::WaitStat qw(waitstat_die);
+
+
+my $sa = 0;
+my $man = 0;
+my $help = 0;
+my $changelog = 0;
+my $shell = 0;
+GetOptions('help|?' => \$help, man => \$man,
+		sa => \$sa, changelog => \$changelog,
+		shell => \$shell) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+sub build
+{
+	my $control;
+	my (@packages, $src_pkg, $upversionchdir, $debversion);
+	my ($pkg) = @_;
+	print "-----> Building $pkg <-----\n";
+	open(APTSOURCE,"apt-get -y --print-uris source $pkg |");
+	while(<APTSOURCE>)
+	{
+		if(/^\'(http|ftp|file):/)
+		{
+	    @packages = split / /;
+	    if($packages[1] =~ /^(.*)_(.*)(-.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = $3; }
+	    elsif($packages[1] =~ /^(.*)_(.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = ""; }
+		}
+	}
+	wait;
+	close(APTSOURCE);
+	wait;
+
+	my $rc;
+	$rc=system("sudo","rm","-rf","$src_pkg-$upversionchdir");
+	waitstat_die($rc,"rm -rf $src_pkg-$upversionchdir");
+
+	$rc=system("apt-get","-y","source","$pkg");
+	waitstat_die($rc,"apt-get -y source $pkg");
+
+	chdir("$src_pkg-$upversionchdir") or die "Unable to chdir to $src_pkg-$upversionchdir: $!\n";
+
+	# Get real version, including epoch
+	open(VERSION,"dpkg-parsechangelog  | sed -n 's/Version: //p' |");
+	my $version=<VERSION>;
+	chomp($version);
+	wait;
+	close(VERSION);
+	wait;
+
+	# Add an entry in changelog 
+	$rc=system("chmod","u+w","debian/changelog");
+	waitstat_die($rc,"chmod u+w debian/changelog");
+
+	$rc=system("debchange","-p","-v$version.bam.1","Rebuild for woody.");
+	waitstat_die($rc,"debchange -p -v$version.bam.1 \"Rebuild for woody.\"");
+
+	if ($changelog) {
+		# Review changelog
+		$rc=system("less","debian/changelog");
+		waitstat_die($rc,"less debian/changelog");
+	}
+
+	if ($shell) {
+		print "Entering shell, type exit to continue building.\n";
+		$rc=system("zsh");
+		waitstat_die($rc,"zsh");
+	}
+
+	# Now build
+	if ($sa) {
+		$rc=system("pbuilder-local","--sa","--build");
+		waitstat_die($rc,"pbuilder-local --sa --build");
+	} else {
+		$rc=system("pbuilder-local","--build");
+		waitstat_die($rc,"pbuilder-local --build");
+	}
+
+	$rc=system("debrelease","--to","snoopy");
+	waitstat_die($rc,"debrelease --to snoopy");
+
+	return 1;
+}
+
+while ($ARGV[0]) {
+  build($ARGV[0]) or die "build failed\n";
+  shift;
+}
+
+__END__
+
+=head1 NAME
+
+woody_get_build_upload - Get unstable package, build it, and upload it
+
+=head1 SYNOPSIS
+
+woody_get_build_upload [options] [package...]
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+
+Print a brief help message and exits.
+
+=item B<-man>
+
+Prints the manual page and exits.
+
+=item B<-sa>
+
+Use -sa option to dpkg-buildpackage
+
+=item B<-changelog>
+
+Display changelog after updating it.
+
+=item B<-shell>
+
+Execute shell after updating changelog.
+
+=back
+
+=head1 DESCRIPTION
+
+B<This program> will do stuff and exit.
+
+=cut

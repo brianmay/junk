@@ -1,0 +1,23 @@
+#!/bin/sh -e
+cd $HOME/bsmtp
+mkdir ../download 2> /dev/null || true
+
+shopt -s nullglob
+for DOMAIN in *
+do
+	IN=$DOMAIN
+	INLOCK=$DOMAIN.lock
+	OUT=../download/$DOMAIN
+
+	/usr/bin/lockfile-create $INLOCK
+
+	if [ -f $IN ];
+	then
+		if [ ! -f $OUT ];
+		then
+			mv $IN $OUT
+		fi
+	fi
+
+	/usr/bin/lockfile-remove $INLOCK
+done

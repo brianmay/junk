@@ -1,0 +1,39 @@
+#!/bin/sh -ex
+
+process_bsmtp() {
+  cd $HOME/download
+  shopt -s nullglob
+  for i in *
+  do
+#   { $HOME/bin/bsmtp < $i > $HOME/log/$i.log; } 2>&1 | tee $HOME/log/$i.error
+#   /usr/sbin/sendmail -bs < $i > $HOME/log/$i.log
+    /usr/sbin/rbsmtp < $i
+    rm $i
+  done
+  cd ..
+  rmdir $HOME/download
+}
+
+if ! test -d $HOME/download
+then
+  #HOST=klecker.debian.org
+  HOST=gluck.debian.org
+  USER=bam
+
+  ssh $USER@$HOST bin/downloadmail
+  mkdir $HOME/download.tmp 2> /dev/null || true
+  rsync -essh -avz --progress $USER@$HOST:download/  $HOME/download.tmp
+  mv $HOME/download.tmp $HOME/download
+  ssh $USER@$HOST rm -rf download
+fi
+
+process_bsmtp
+
+# MONASH MAIL
+#HOST=bruce.csse.monash.edu.au
+#USER=bmay
+#ssh -l$USER $HOST downloadmail
+#rsync -essh -vz --progress $USER@$HOST:mbox.download  $HOME/mbox.monash
+#formail -A "Delivered-To: bmay@csse.monash.edu.au" -s maildrop < $HOME/mbox.monash 
+#rm $HOME/mbox.monash
+#ssh -l$USER $HOST rm mbox.download

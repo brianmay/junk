@@ -1,0 +1,154 @@
+#!/bin/sh -e
+
+TEMP=`getopt -o '' --long stable,unstable,uml,sa,create,build,update,login -n'pbuilder-local' -- "$@"`
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+COMMAND="login"
+SA=""
+TGZNAME=""
+DISTRIBUTION="woody"
+OTHERMIRROR="deb http://snoopy.apana.org.au/debian/ unstable main"
+UML=""
+HOOKDIR=""
+#HOOKDIR="/usr/share/doc/pbuilder/examples"
+
+while true
+do
+	case "$1" in
+	--stable)
+		TGZNAME="stable"
+		DISTRIBUTION="woody"
+		OTHERMIRROR=""
+		shift;
+		;;
+	--unstable)
+		TGZNAME="unstable"
+		DISTRIBUTION="unstable"
+		OTHERMIRROR=""
+#		HOOKDIR="/usr/share/doc/pbuilder/examples"
+		shift;
+		;;
+	--uml)
+		UML="uml";
+		shift;
+		;;
+	--sa)
+		SA="-sa";
+		shift;
+		;;
+	--create)
+		COMMAND="create";
+		shift;
+		;;
+	--build)
+		COMMAND="build";
+		shift;
+		;;
+	--update)
+		COMMAND="update";
+		shift;
+		;;
+	--login)
+		COMMAND="login";
+		shift;
+		;;
+	--)
+		shift;
+		break ;;
+	*) echo "Internal error!" ; exit 1 ;;
+	esac
+done
+
+if [ "$UML" = "uml" ]
+then
+	OLDTMPDIR=$TMPDIR
+	unset TMPDIR
+	TMPFILE=`mktemp -p /var/tmp -t pbuilder-local.XXXXXXXXXX` || exit 1
+	TMPDIR=$OLDTMPDIR
+else
+	TMPFILE=`mktemp -t pbuilder-local.XXXXXXXXXX` || exit 1
+fi
+
+cleanup() {
+        rm -f "$TMPFILE"
+	}
+trap cleanup 0
+
+#DEBPARAMS="-e'Brian May <bam@debian.org>'"
+DEBPARAMS="$DEBPARAMS -i\+\+pristine-trees|,,*|\{arch\}|\.arch-ids"
+
+if [ "$COMMAND" = "build" ]
+then
+	if [ "$SA" != "" ]
+	then
+		DEBPARAMS="$DEBPARAMS $SA"
+	fi
+fi
+
+cat <<EOF >>$TMPFILE
+#MIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian/"
+#NONUSMIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian-non-US/"
+MIRRORSITE="http://snoopy.apana.org.au:8081/debian/"
+NONUSMIRRORSITE="http://snoopy.apana.org.au:8081/non-US/"
+BUILDRESULT=".."
+BUILDRESULTUID="`id -u`"
+BUILDRESULTGID="`id -u`"
+DISTRIBUTION="$DISTRIBUTION"
+DEBBUILDOPTS="$DEBPARAMS"
+OTHERMIRROR="$OTHERMIRROR"
+HOOKDIR="$HOOKDIR"
+USE_PDEBUILD_INTERNAL="yes"
+export TMP="/tmp"
+export TMPDIR="/tmp"
+EOF
+
+if [ "$UML" = "uml" ]
+then
+	if [ "$TGZNAME" = "" ]
+	then
+		IMAGE="umlimage.img"
+	else
+		IMAGE="umlimage-$TGZNAME.img"
+	fi
+
+cat <<EOF >>$TMPFILE
+PBUILDER_UML_IMAGE="$IMAGE"
+EOF
+
+	echo "pbuilder-user-mode-linux $COMMAND --configfile $TMPFILE"
+	pbuilder-user-mode-linux $COMMAND --configfile $TMPFILE
+
+else
+	if [ "$TGZNAME" = "" ]
+	then
+		BASETGZ="/var/cache/pbuilder/base.tgz"
+	else
+		BASETGZ="/var/cache/pbuilder/base-$TGZNAME.tgz"
+	fi
+
+cat <<EOF >>$TMPFILE
+BASETGZ="$BASETGZ"
+EOF
+
+	if [ "$COMMAND" = "build" ]
+	then
+		echo $TMPFILE
+		cat $TMPFILE
+
+		SOURCE=`dpkg-parsechangelog|sed -n 's/^Source: //p'`
+		VERSION=`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`
+
+		echo "pdebuild --configfile $TMPFILE"
+		pdebuild --configfile $TMPFILE
+
+		echo "debsign ../$SOURCE""_$VERSION""_i386.changes"
+		debsign "../$SOURCE""_$VERSION""_i386.changes"
+	else
+		echo "pbuilder $COMMAND --override-config --configfile $TMPFILE"
+		pbuilder $COMMAND --override-config --configfile $TMPFILE
+	fi
+
+fi
