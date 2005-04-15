@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+CMD="rm -f"
+#CMD="ls -lt"
+#CMD="grep Date:"
+#CMD="less"
+
+find $HOME/Maildir/cur -mindepth 1 \( -name "*,S"  -or -name "*,RS" \) -and -mtime +56 -print0 | xargs -0 --no-run-if-empty $CMD
+find $HOME/Maildir/.backup/cur -mindepth 1 \( -name "*" -or -name "*," -or -name "*,S"  -or -name "*,RS" \) -and -mtime +7 -print0 | xargs -0 --no-run-if-empty $CMD
+find $HOME/Maildir/.lists.*/cur -mindepth 1 \( -name "*,S"  -or -name "*,RS" \) -and -mtime +14 -print0 | xargs -0 --no-run-if-empty $CMD
+find $HOME/Maildir/.user.*/cur -mindepth 1 \( -name "*,S"  -or -name "*,RS" \) -and -mtime +56 -print0 | xargs -0 --no-run-if-empty $CMD
+find $HOME/Maildir/.user.postmaster.spam/cur -mindepth 1 \( -name "*,S"  -or -name "*,RS" \) -and -mtime +14 -print0 | xargs -0 --no-run-if-empty $CMD
+find $HOME/Maildir/.user.postmaster.virus/cur -mindepth 1 \( -name "*,S"  -or -name "*,RS" \) -and -mtime +14 -print0 | xargs -0 --no-run-if-empty $CMD
