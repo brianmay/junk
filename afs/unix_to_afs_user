@@ -1,0 +1,27 @@
+#!/bin/sh -ex
+
+HOST="snoopy"
+PARTITION="b"
+DOMAIN="microcomaustralia.com.au"
+
+USER=$1
+if [ -z "$USER" ]
+then
+        echo "Need to supply user name" >&2
+        exit 1
+fi
+
+if ! IDLINE=`getent passwd $USER`
+then
+        echo "Unknown User $USER" 2>&1;
+        exit 1;
+fi
+
+ID=`echo "$IDLINE" | gawk -F: '{ print $3; }'`
+
+pts createuser "$USER" "$ID"
+vos create "$HOST" "$PARTITION" user.$USER
+fs mkmount /afs/.$DOMAIN/user/$USER user.$USER
+fs setacl  /afs/.$DOMAIN/user/$USER -acl $USER all
+chown $USER /afs/.$DOMAIN/user/$USER
+chmod 755 /afs/.$DOMAIN/user/$USER
