@@ -44,6 +44,13 @@ fi
 ID="$1"
 shift
 
+if [ ! -f /etc/mailname ]
+then
+        echo "/etc/mailname not configured" 2>&1
+        exit 1;
+fi
+mailname=`cat /etc/mailname`
+
 IDLINE=`getent passwd $ID` || ( echo "Unknown User $ID" 2>&1; exit 255 )
 DIR=`echo $IDLINE | gawk -F: '{ print $6; }'`
 NAME=`echo $IDLINE | gawk -F: '{ print $5; }' | gawk -F, '{ print $1; }'`
@@ -51,7 +58,7 @@ NAME=`echo $IDLINE | gawk -F: '{ print $5; }' | gawk -F, '{ print $1; }'`
 case "$OPERATION" in
 enable)
         cat << EOF > $DIR/.vacation.msg.new
-From: $NAME <$ID@nelsonwineco.com.au>
+From: $NAME <$ID@$mailname>
 Subject: Out of the office
 Delivered-By-The-Graces-Of: The Vacation program
 Precedence: bulk
