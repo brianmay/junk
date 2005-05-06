@@ -46,7 +46,7 @@ shift
 
 IDLINE=`getent passwd $ID` || ( echo "Unknown User $ID" 2>&1; exit 255 )
 DIR=`echo $IDLINE | gawk -F: '{ print $6; }'`
-NAME=`echo $IDLINE | gawk -F: '{ print $5; }'`
+NAME=`echo $IDLINE | gawk -F: '{ print $5; }' | gawk -F, '{ print $1; }'`
 
 case "$OPERATION" in
 enable)
