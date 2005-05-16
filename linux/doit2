@@ -1,0 +1,36 @@
+#!/bin/sh -ex
+
+VERSION=2.4.20
+
+dooldconfig() {
+	cp config/$1 ../../kernel/kernel-source-$VERSION/.config
+	(cd ../../kernel/kernel-source-$VERSION/; make oldconfig);
+	cp ../../kernel/kernel-source-$VERSION/.config config/$1;
+}
+
+domenuconfig() {
+	cp config/$1 ../../kernel/kernel-source-$VERSION/.config
+	(cd ../../kernel/kernel-source-$VERSION/; make menuconfig);
+	cp ../../kernel/kernel-source-$VERSION/.config config/$1;
+}
+
+domenuconfig 386
+dooldconfig 386
+
+sed s/^CONFIG_EXT2_FS=.*$/CONFIG_EXT2_FS=m/ < config.old/386 > 386-old-hacked
+sed s/^CONFIG_EXT2_FS=.*$/CONFIG_EXT2_FS=m/ < config/386 > 386-new-hacked
+diff -u 386-old-hacked 386-new-hacked > patch || true
+rm 386-old-hacked 386-new-hacked
+
+sleep 1;
+
+for i in 586tsc 686 686-smp k6 k7 k7-smp;
+do
+	cp -a config.old/$i config/$i
+	patch config/$i patch
+	sleep 1;
+	dooldconfig $i
+done;
+
+cp -a config.old/default config/default
+dooldconfig default

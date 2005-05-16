@@ -1,0 +1,33 @@
+#!/bin/sh -ex
+
+VERSION=2.4.20
+DVERSION=2.4.20-2
+
+# get patches
+#rm -rf patches
+#mkdir patches
+#cd patches
+##tar -xvzf ../isdn-2.4-220601.tar.gz
+#tar -xvzf ../isdn-2.4-170402.tgz
+#tar -xvf ../voice_2.4_240602.tar
+#patch isdn/drivers/isdn/hisax/netjet.c < voice_patch_2.4_240602
+#cd ..
+
+# unpack source
+rm -rf kernel-source-$VERSION-$VERSION
+dpkg-source -x kernel-source-$VERSION""_$DVERSION.dsc
+
+# apply patches
+#cd patches/isdn
+#./std2kern -k ../../kernel-source-$VERSION-$VERSION
+#cd ../..
+
+cd kernel-source-$VERSION-$VERSION
+/usr/src/kernel-patches/all/apply/lsm
+/usr/src/kernel-patches/all/apply/freeswan
+#/usr/src/kernel-patches/all/apply/device-mapper
+/usr/src/kernel-patches/all/apply/evmscommon
+/usr/src/kernel-patches/all/apply/evms
+/usr/src/kernel-patches/all/apply/evms-VFS-lock
+/usr/src/kernel-patches/all/apply/acl
+#patch -p1 < ../patch-$VERSION
