@@ -1,0 +1,66 @@
+#!/usr/bin/perl -w
+use strict;
+
+my %map;
+my %mapimportant;
+my $repeat=0;
+my $lastdnum=0;
+
+while (<>) {
+  my $msgnum="";
+  my $dnum="";
+  my $important = 0;
+  my $begin = 0;
+  my $end = 0;
+
+  if (/new msg ([0-9]+)/) {
+    $msgnum=$1;
+  }
+  elsif (/info msg ([0-9]+)/) {
+    $msgnum=$1;
+  }
+  elsif (/end msg ([0-9]+)/) {
+    $msgnum=$1;
+  }
+  elsif (/starting delivery ([0-9]+): msg ([0-9]+) to local log@/) {
+    $dnum=$1;
+    $msgnum=$2;
+    $important = 1;
+    $begin = 1;
+  }
+  elsif (/starting delivery ([0-9]+): msg ([0-9]+)/) {
+    $dnum=$1;
+    $msgnum=$2;
+    $begin = 1;
+  }
+  elsif (/delivery ([0-9]+)/) {
+    $dnum=$1;
+    $msgnum = $map{$repeat}{$dnum};
+    $end = 1;
+  }
+  elsif (/status: /) {
+  }
+
+  if ($dnum ne "") {
+    if ($begin && $dnum <= 1) {
+	    $repeat++;
+    }
+    $lastdnum = $dnum;
+    $map{$repeat}{$dnum} = $msgnum;
+    if ($important) {
+	    $mapimportant{$repeat}{$dnum} = 1;
+    }
+  }
+
+  #print "$repeat $dnum ".$mapimportant{$repeat}{$dnum}." $msgnum($dnum) ".$_;
+      if ($dnum ne "" && $mapimportant{$repeat}{$dnum}) {
+				printf "%01d %03d %s",$repeat,$dnum,$_;
+	}
+
+  if ($dnum ne "") {
+    if ($end) {
+	    delete $map{$repeat}{$dnum};
+	    delete $mapimportant{$repeat}{$dnum};
+    }
+  }
+}
