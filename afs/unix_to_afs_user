@@ -25,3 +25,7 @@ fs mkmount /afs/.$DOMAIN/user/$USER user.$USER
 fs setacl  /afs/.$DOMAIN/user/$USER -acl $USER all
 chown $USER /afs/.$DOMAIN/user/$USER
 chmod 755 /afs/.$DOMAIN/user/$USER
+
+vos backup user.$USER
+fs mkmount /afs/.$DOMAIN/user/$USER/Backup user.$USER.backup
+chown $USER /afs/.$DOMAIN/user/$USER/Backup

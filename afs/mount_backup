@@ -1,0 +1,8 @@
+#!/bin/sh -ex
+
+DOMAIN=microcomaustralia.com.au
+for USER in bam jan pjmay colin
+do
+	fs mkmount /afs/.$DOMAIN/user/$USER/Backup user.$USER.backup
+	chown $USER /afs/.$DOMAIN/user/$USER/Backup
+done
