@@ -1,0 +1,60 @@
+#!/bin/sh
+# Start/stop the monitor daemon.
+
+DAEMON="/usr/bin/daemon"
+REAL="daemon"
+NAME="monitor"
+PIDFILE="/var/run/$NAME/$NAME.pid"
+PARAM="--name $NAME --pidfile $PIDFILE --output daemon.err --respawn --user daemon.daemon /usr/local/sbin/$NAME"
+
+test -f $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+case "$1" in
+start)  log_begin_msg "Starting $NAME...."
+        start-stop-daemon --start --quiet --pidfile "$PIDFILE" --name "$REAL" --startas "$DAEMON" -- $PARAM
+        log_end_msg $?
+        ;;
+stop)   log_begin_msg "Stopping $NAME...."
+        start-stop-daemon --stop --quiet --pidfile "$PIDFILE" --name "$REAL"
+        log_end_msg $?
+        ;;
+restart) log_begin_msg "Restarting $NAME...."
+        start-stop-daemon --stop --retry 5 --quiet --pidfile "$PIDFILE" --name "$REAL"
+        start-stop-daemon --start --quiet --pidfile "$PIDFILE" --name "$REAL" --startas "$DAEMON" -- $PARAM
+        log_end_msg $?
+        ;;
+
+status)
+        daemon_is_running() {
+            if [ ! -f "$PIDFILE" ]
+            then
+                return 1
+            fi
+            PID=`cat "$PIDFILE"`
+            if [ ! -f /proc/"$PID"/stat ]
+            then
+                return 1
+            fi
+            NAME=`cat /proc/"$PID"/stat | awk '{ print $2 }'`
+            if [ "$NAME" != "($REAL)" ]
+            then
+                return 1;
+            fi
+            return 0;
+        }
+
+        if daemon_is_running
+        then
+                echo running
+        else
+                echo stopped
+        fi
+        ;;
+
+*)      log_success_msg "Usage: /etc/init.d/$NAME start|stop|restart"
+        exit 1
+        ;;
+esac
+exit 0
