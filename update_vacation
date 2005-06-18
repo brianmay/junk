@@ -1,6 +1,6 @@
 #!/bin/sh -e
 # Update vacation status for user.
-# Note: will destroy any existing .forward and/or .vacation.msg files.
+# Note: will destroy any existing .vacation.msg files.
 
 TEMP=`getopt -o '' --long enable,disable -n'update_vacation' -- "$@"`
 
