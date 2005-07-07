@@ -33,7 +33,7 @@ my $version = "append";
 my $upload = undef;
 my $shell = 0;
 GetOptions('help|?' => \$help, man => \$man,
-                sa => \$sa, changelog => \$changelog, distribution = \$distribution,
+                sa => \$sa, changelog => \$changelog, distribution => \$distribution,
                 "version=s" => \$version, "upload=s" => \$upload,
                 shell => \$shell) or pod2usage(2);
 pod2usage(1) if $help;
