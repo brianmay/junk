@@ -30,80 +30,80 @@ my $help = 0;
 my $changelog = 0;
 my $shell = 0;
 GetOptions('help|?' => \$help, man => \$man,
-		sa => \$sa, changelog => \$changelog,
-		shell => \$shell) or pod2usage(2);
+                sa => \$sa, changelog => \$changelog,
+                shell => \$shell) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 
 sub build
 {
-	my $control;
-	my (@packages, $src_pkg, $upversionchdir, $debversion);
-	my ($pkg) = @_;
-	print "-----> Building $pkg <-----\n";
-	open(APTSOURCE,"apt-get -y --print-uris source $pkg |");
-	while(<APTSOURCE>)
-	{
-		if(/^\'(http|ftp|file):/)
-		{
-	    @packages = split / /;
-	    if($packages[1] =~ /^(.*)_(.*)(-.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = $3; }
-	    elsif($packages[1] =~ /^(.*)_(.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = ""; }
-		}
-	}
-	wait;
-	close(APTSOURCE);
-	wait;
+        my $control;
+        my (@packages, $src_pkg, $upversionchdir, $debversion);
+        my ($pkg) = @_;
+        print "-----> Building $pkg <-----\n";
+        open(APTSOURCE,"apt-get -y --print-uris source $pkg |");
+        while(<APTSOURCE>)
+        {
+                if(/^\'(http|ftp|file):/)
+                {
+            @packages = split / /;
+            if($packages[1] =~ /^(.*)_(.*)(-.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = $3; }
+            elsif($packages[1] =~ /^(.*)_(.*)\.dsc$/) { $src_pkg = $1; $upversionchdir = $2; $debversion = ""; }
+                }
+        }
+        wait;
+        close(APTSOURCE);
+        wait;
 
-	my $rc;
-	$rc=system("sudo","rm","-rf","$src_pkg-$upversionchdir");
-	waitstat_die($rc,"rm -rf $src_pkg-$upversionchdir");
+        my $rc;
+        $rc=system("sudo","rm","-rf","$src_pkg-$upversionchdir");
+        waitstat_die($rc,"rm -rf $src_pkg-$upversionchdir");
 
-	$rc=system("apt-get","-y","source","$pkg");
-	waitstat_die($rc,"apt-get -y source $pkg");
+        $rc=system("apt-get","-y","source","$pkg");
+        waitstat_die($rc,"apt-get -y source $pkg");
 
-	chdir("$src_pkg-$upversionchdir") or die "Unable to chdir to $src_pkg-$upversionchdir: $!\n";
+        chdir("$src_pkg-$upversionchdir") or die "Unable to chdir to $src_pkg-$upversionchdir: $!\n";
 
-	# Get real version, including epoch
-	open(VERSION,"dpkg-parsechangelog  | sed -n 's/Version: //p' |");
-	my $version=<VERSION>;
-	chomp($version);
-	wait;
-	close(VERSION);
-	wait;
+        # Get real version, including epoch
+        open(VERSION,"dpkg-parsechangelog  | sed -n 's/Version: //p' |");
+        my $version=<VERSION>;
+        chomp($version);
+        wait;
+        close(VERSION);
+        wait;
 
-	# Add an entry in changelog 
-	$rc=system("chmod","u+w","debian/changelog");
-	waitstat_die($rc,"chmod u+w debian/changelog");
+        # Add an entry in changelog
+        $rc=system("chmod","u+w","debian/changelog");
+        waitstat_die($rc,"chmod u+w debian/changelog");
 
-	$rc=system("debchange","-p","-v$version.bam.1","Rebuild for woody.");
-	waitstat_die($rc,"debchange -p -v$version.bam.1 \"Rebuild for woody.\"");
+        $rc=system("debchange","-p","-v$version.bam.1","Rebuild for woody.");
+        waitstat_die($rc,"debchange -p -v$version.bam.1 \"Rebuild for woody.\"");
 
-	if ($changelog) {
-		# Review changelog
-		$rc=system("less","debian/changelog");
-		waitstat_die($rc,"less debian/changelog");
-	}
+        if ($changelog) {
+                # Review changelog
+                $rc=system("less","debian/changelog");
+                waitstat_die($rc,"less debian/changelog");
+        }
 
-	if ($shell) {
-		print "Entering shell, type exit to continue building.\n";
-		$rc=system("zsh");
-		waitstat_die($rc,"zsh");
-	}
+        if ($shell) {
+                print "Entering shell, type exit to continue building.\n";
+                $rc=system("zsh");
+                waitstat_die($rc,"zsh");
+        }
 
-	# Now build
-	if ($sa) {
-		$rc=system("pbuilder-local","--sa","--build");
-		waitstat_die($rc,"pbuilder-local --sa --build");
-	} else {
-		$rc=system("pbuilder-local","--build");
-		waitstat_die($rc,"pbuilder-local --build");
-	}
+        # Now build
+        if ($sa) {
+                $rc=system("pbuilder-local","--sa","--build");
+                waitstat_die($rc,"pbuilder-local --sa --build");
+        } else {
+                $rc=system("pbuilder-local","--build");
+                waitstat_die($rc,"pbuilder-local --build");
+        }
 
-	$rc=system("debrelease","--to","snoopy");
-	waitstat_die($rc,"debrelease --to snoopy");
+        $rc=system("debrelease","--to","snoopy");
+        waitstat_die($rc,"debrelease --to snoopy");
 
-	return 1;
+        return 1;
 }
 
 while ($ARGV[0]) {
