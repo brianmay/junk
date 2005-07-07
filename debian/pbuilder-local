@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-TEMP=`getopt -o '' --long stable,unstable,uml,sa,create,build,update,login -n'pbuilder-local' -- "$@"`
+TEMP=`getopt -o '' --long distribution:,uml,sa,create,build,update,login -n'pbuilder-local' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -8,27 +8,17 @@ eval set -- "$TEMP"
 
 COMMAND="login"
 SA=""
-TGZNAME=""
-DISTRIBUTION="woody"
-OTHERMIRROR="deb http://snoopy.apana.org.au/debian/ unstable main"
+DISTRIBUTION="sid"
+OTHERMIRROR=""
 UML=""
 HOOKDIR=""
-#HOOKDIR="/usr/share/doc/pbuilder/examples"
 
 while true
 do
 	case "$1" in
-	--stable)
-		TGZNAME="stable"
-		DISTRIBUTION="woody"
-		OTHERMIRROR=""
-		shift;
-		;;
-	--unstable)
-		TGZNAME="unstable"
-		DISTRIBUTION="unstable"
-		OTHERMIRROR=""
-#		HOOKDIR="/usr/share/doc/pbuilder/examples"
+	--distribution)
+		shift
+		DISTRIBUTION="$1"
 		shift;
 		;;
 	--uml)
@@ -91,8 +81,10 @@ fi
 cat <<EOF >>$TMPFILE
 #MIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian/"
 #NONUSMIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian-non-US/"
-MIRRORSITE="http://snoopy.apana.org.au:8081/debian/"
-NONUSMIRRORSITE="http://snoopy.apana.org.au:8081/non-US/"
+MIRRORSITE="http://snoopy.apana.org.au:9999/debian/"
+#NONUSMIRRORSITE="http://snoopy.apana.org.au:9999/non-US/"
+#MIRRORSITE="http://ftp.au.debian.org/debian/"
+#NONUSMIRRORSITE="http://ftp.au.debian.org/debian-non-US/"
 BUILDRESULT=".."
 BUILDRESULTUID="`id -u`"
 BUILDRESULTGID="`id -u`"
@@ -107,12 +99,7 @@ EOF
 
 if [ "$UML" = "uml" ]
 then
-	if [ "$TGZNAME" = "" ]
-	then
-		IMAGE="umlimage.img"
-	else
-		IMAGE="umlimage-$TGZNAME.img"
-	fi
+        IMAGE="umlimage-$DISTRIBUTION.img"
 
 cat <<EOF >>$TMPFILE
 PBUILDER_UML_IMAGE="$IMAGE"
@@ -122,12 +109,7 @@ EOF
 	pbuilder-user-mode-linux $COMMAND --configfile $TMPFILE
 
 else
-	if [ "$TGZNAME" = "" ]
-	then
-		BASETGZ="/var/cache/pbuilder/base.tgz"
-	else
-		BASETGZ="/var/cache/pbuilder/base-$TGZNAME.tgz"
-	fi
+        BASETGZ="/var/cache/pbuilder/base-$DISTRIBUTION.tgz"
 
 cat <<EOF >>$TMPFILE
 BASETGZ="$BASETGZ"
