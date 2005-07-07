@@ -28,11 +28,12 @@ my $sa = 0;
 my $man = 0;
 my $help = 0;
 my $changelog = 0;
+my $distribution = undef;
 my $version = "append";
 my $upload = undef;
 my $shell = 0;
 GetOptions('help|?' => \$help, man => \$man,
-                sa => \$sa, changelog => \$changelog,
+                sa => \$sa, changelog => \$changelog, distribution = \$distribution,
                 "version=s" => \$version, "upload=s" => \$upload,
                 shell => \$shell) or pod2usage(2);
 pod2usage(1) if $help;
@@ -101,6 +102,10 @@ sub build
                 push(@ARGS,"--sa");
         }
 
+        if (defined($distribution)) {
+                push(@ARGS,"--distribution",$distribution);
+        }
+
         # Now build
         $rc=system("pbuilder-local","--build",@ARGS);
         waitstat_die($rc,"pbuilder-local --build ".join(" ",@ARGS));
@@ -152,6 +157,10 @@ Display changelog after updating it.
 =item B<-shell>
 
 Execute shell after updating changelog.
+
+=item B<-distribution=s>
+
+Override the distribution.
 
 =item B<-version=s>
 
