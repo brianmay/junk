@@ -96,14 +96,15 @@ sub build
                 waitstat_die($rc,"zsh");
         }
 
-        # Now build
+        my @ARGS = ();
         if ($sa) {
-                $rc=system("pbuilder-local","--sa","--build");
-                waitstat_die($rc,"pbuilder-local --sa --build");
-        } else {
-                $rc=system("pbuilder-local","--build");
-                waitstat_die($rc,"pbuilder-local --build");
+                push(@ARGS,"--sa");
         }
+
+        # Now build
+        $rc=system("pbuilder-local","--build",@ARGS);
+        waitstat_die($rc,"pbuilder-local --build ".join(" ",@ARGS));
+
 
         if (defined($upload)) {
                 $rc=system("debrelease","--dput",$upload);
