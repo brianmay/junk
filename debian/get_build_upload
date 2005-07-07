@@ -30,11 +30,13 @@ my $help = 0;
 my $changelog = 0;
 my $distribution = undef;
 my $version = "append";
+my $key = undef;
 my $upload = undef;
 my $shell = 0;
 GetOptions('help|?' => \$help, man => \$man,
                 sa => \$sa, changelog => \$changelog, distribution => \$distribution,
-                "version=s" => \$version, "upload=s" => \$upload,
+                "version=s" => \$version,
+                "key=s" => \$key, "upload=s" => \$upload,
                 shell => \$shell) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -106,6 +108,10 @@ sub build
                 push(@ARGS,"--distribution",$distribution);
         }
 
+        if (defined($key)) {
+                push(@ARGS,"--key",$key);
+        }
+
         # Now build
         $rc=system("pbuilder-local","--build",@ARGS);
         waitstat_die($rc,"pbuilder-local --build ".join(" ",@ARGS));
@@ -165,6 +171,10 @@ Override the distribution.
 =item B<-version=s>
 
 Override the version used.
+
+=item B<-key=s>
+
+Sign with a non-default key.
 
 =item B<-upload=s>
 

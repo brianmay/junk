@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-TEMP=`getopt -o '' --long distribution:,uml,sa,create,build,update,login -n'pbuilder-local' -- "$@"`
+TEMP=`getopt -o '' --long distribution:,key:,uml,sa,create,build,update,login -n'pbuilder-local' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -11,6 +11,7 @@ SA=""
 DISTRIBUTION="sid"
 OTHERMIRROR=""
 UML=""
+KEY=""
 HOOKDIR=""
 
 while true
@@ -19,6 +20,11 @@ do
 	--distribution)
 		shift
 		DISTRIBUTION="$1"
+		shift;
+		;;
+	--key)
+		shift
+		KEY="-k$1"
 		shift;
 		;;
 	--uml)
@@ -127,7 +133,7 @@ EOF
 		pdebuild --configfile $TMPFILE
 
 		echo "debsign ../$SOURCE""_$VERSION""_i386.changes"
-		debsign "../$SOURCE""_$VERSION""_i386.changes"
+		debsign "$KEY" "../$SOURCE""_$VERSION""_i386.changes"
 	else
 		echo "pbuilder $COMMAND --override-config --configfile $TMPFILE"
 		pbuilder $COMMAND --override-config --configfile $TMPFILE
