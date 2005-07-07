@@ -29,10 +29,11 @@ my $man = 0;
 my $help = 0;
 my $changelog = 0;
 my $version = "append";
+my $upload = undef;
 my $shell = 0;
 GetOptions('help|?' => \$help, man => \$man,
                 sa => \$sa, changelog => \$changelog,
-                "version=s" => \$version,
+                "version=s" => \$version, "upload=s" => \$upload,
                 shell => \$shell) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -104,8 +105,10 @@ sub build
                 waitstat_die($rc,"pbuilder-local --build");
         }
 
-        $rc=system("debrelease","--to","snoopy");
-        waitstat_die($rc,"debrelease --to snoopy");
+        if (defined($upload)) {
+                $rc=system("debrelease","--dput",$upload);
+                waitstat_die($rc,"debrelease --dput $upload");
+        }
 
         return 1;
 }
@@ -152,6 +155,10 @@ Execute shell after updating changelog.
 =item B<-version=s>
 
 Override the version used.
+
+=item B<-upload=s>
+
+Upload the file to given location.
 
 =back
 
