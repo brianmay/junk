@@ -73,19 +73,21 @@ sub build
         if ($version eq "append") {
                 # Get real version, including epoch
                 open(VERSION,"dpkg-parsechangelog  | sed -n 's/Version: //p' |");
-                my $version=<VERSION>;
+                $version=<VERSION>;
                 chomp($version);
                 wait;
                 close(VERSION);
                 wait;
+        } else {
+                $verion = "$version.bam.1";
         }
 
         # Add an entry in changelog
         $rc=system("chmod","u+w","debian/changelog");
         waitstat_die($rc,"chmod u+w debian/changelog");
 
-        $rc=system("debchange","-p","-v$version.bam.1","Rebuild for woody.");
-        waitstat_die($rc,"debchange -p -v$version.bam.1 \"Rebuild for woody.\"");
+        $rc=system("debchange","-p","-v$version","Rebuild for $DISTRIBUTION.");
+        waitstat_die($rc,"debchange -p -v$version \"Rebuild for $DISTRIBUTION.\"");
 
         if ($changelog) {
                 # Review changelog
