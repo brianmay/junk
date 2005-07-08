@@ -24,7 +24,7 @@ do
 		;;
 	--key)
 		shift
-		KEY="-k$1"
+		KEY="$1"
 		shift;
 		;;
 	--uml)
@@ -132,8 +132,14 @@ EOF
 		echo "pdebuild --configfile $TMPFILE"
 		pdebuild --configfile $TMPFILE
 
-		echo "debsign ../$SOURCE""_$VERSION""_i386.changes"
-		debsign "$KEY" "../$SOURCE""_$VERSION""_i386.changes"
+                if [ -z "$KEY" ]
+                then
+                        echo "debsign ../$SOURCE""_$VERSION""_i386.changes"
+                        debsign "../$SOURCE""_$VERSION""_i386.changes"
+                else
+                        echo "debsign $KEY ../$SOURCE""_$VERSION""_i386.changes"
+                        debsign "-k$KEY" "../$SOURCE""_$VERSION""_i386.changes"
+                fi
 	else
 		echo "pbuilder $COMMAND --override-config --configfile $TMPFILE"
 		pbuilder $COMMAND --override-config --configfile $TMPFILE
