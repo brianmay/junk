@@ -86,11 +86,20 @@ fi
 
 cat <<EOF >>$TMPFILE
 #MIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian/"
-#NONUSMIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian-non-US/"
 MIRRORSITE="http://snoopy.apana.org.au:9999/debian/"
-#NONUSMIRRORSITE="http://snoopy.apana.org.au:9999/non-US/"
 #MIRRORSITE="http://ftp.au.debian.org/debian/"
+EOF
+
+if [ "$DISTRIBUTION" = "woody" ]
+then
+cat <<EOF >>$TMPFILE
+#NONUSMIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian-non-US/"
+NONUSMIRRORSITE="http://snoopy.apana.org.au:9999/non-US/"
 #NONUSMIRRORSITE="http://ftp.au.debian.org/debian-non-US/"
+EOF
+fi
+
+cat <<EOF >>$TMPFILE
 BUILDRESULT=".."
 BUILDRESULTUID="`id -u`"
 BUILDRESULTGID="`id -u`"
