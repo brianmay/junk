@@ -58,6 +58,12 @@ do
 	esac
 done
 
+if [ "$DISTRIBUTION" = "mysarge" ]
+then
+        DISTRIBUTION=sarge
+        OTHERMIRROR="deb http://staff.microcomaustralia.com.au/brian/debian/ sarge main"
+fi
+
 if [ "$UML" = "uml" ]
 then
 	OLDTMPDIR=$TMPDIR
