@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 
 process_bsmtp() {
   cd $HOME/download
