@@ -22,7 +22,7 @@ then
 
   ssh $USER@$HOST bin/downloadmail
   mkdir $HOME/download.tmp 2> /dev/null || true
-  rsync -essh -avz --progress $USER@$HOST:download/  $HOME/download.tmp
+  rsync -essh -avz $USER@$HOST:download/  $HOME/download.tmp
   mv $HOME/download.tmp $HOME/download
   ssh $USER@$HOST rm -rf download
 fi
