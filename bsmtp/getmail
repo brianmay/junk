@@ -14,6 +14,13 @@ process_bsmtp() {
   rmdir $HOME/download
 }
 
+LOCKFILE="$HOME/download.lock"
+lockfile -r1 "$LOCKFILE"
+cleanup() {
+rm -f "$LOCKFILE"
+}
+trap cleanup 0
+
 if ! test -d $HOME/download
 then
   #HOST=klecker.debian.org
