@@ -1,0 +1,127 @@
+#!/usr/bin/zsh
+
+PROGNAME=$0
+
+usage() {
+cat >&2 <<EOF
+Usage: $PROGNAME [command] [options] host:directory [--] files
+Command:
+	--get	Get files from remote host
+	--put	Put files onto remote host
+
+Options:
+	-v	Verbose
+	-z	Compress with gzip
+
+Where:
+	host	Name of remote computer
+
+	directory
+		cd to this directory on the remote hosts before proceeding
+	
+	files	files/directories to transfer
+
+EOF
+}
+
+DONE=
+
+REMOTE_HOST=
+REMOTE_DIR=
+
+VERBOSE=
+COMPRESS=
+SPEC=
+
+OPERATION=
+
+while [[ "$1" != "" && "$DONE" = "" ]]
+do
+	case "$1" in
+	"--")
+		shift
+		SPEC=( $* )
+		DONE="yes"
+		shift;;
+
+	"--get")
+		OPERATION="get"
+		shift;;
+	
+	"--put")
+		OPERATION="put"
+		shift;;
+
+	"-v")
+		VERBOSE="-v"
+		shift;;
+
+	"-z")
+		COMPRESS="-z"
+		shift;;
+
+	"-"*)
+		echo "$PROGNAME: Unknown option $1" >&2
+		usage
+		exit 1;;
+
+	*)
+		if [[ "$REMOTE_HOST" = "" ]]
+		then
+			TEMP=( ${(s=:=)1} ) 
+			REMOTE_HOST=$TEMP[1];
+			REMOTE_DIR=$TEMP[2];
+			shift
+		else
+			SPEC=( $* )
+			DONE="yes"
+		fi;;
+	esac
+
+done
+
+if [[ "$OPERATION" = "" ]]
+then
+	echo "$PROGNAME: No operation given" >&2
+	usage
+	exit 1;
+fi
+
+if [[ "$REMOTE_HOST" = "" ]]
+then
+	echo "$PROGNAME: No remote hostname given" >&2
+	usage
+	exit 1;
+fi
+
+if [[ "$REMOTE_DIR[1]" != "/" && "$REMOTE_DIR[1]" != "~" ]]
+then
+	REMOTE_DIR=$PWD/$REMOTE_DIR
+fi
+
+REMOTE_DIR_NEW=${REMOTE_DIR#~}
+if [[ "$REMOTE_DIR" != "$REMOTE_DIR_NEW" ]]
+then
+		REMOTE_DIR="~$REMOTE_DIR_NEW"
+fi
+
+if [[ "$SPEC" = "" ]]
+then
+	echo "$PROGNAME: No file spec was given" >&2
+	usage
+	exit 1;
+fi
+
+if [[ "$OPERATION" = "get" ]]
+then
+	REMOTE_TAR=( "tar" "-c" $COMPRESS "-f" "-" $SPEC )
+	LOCAL_TAR=(  "tar" "-x" $COMPRESS $VERBOSE "-f" "-" )
+	ssh $REMOTE_HOST "(cd $REMOTE_DIR && $REMOTE_TAR)" | $LOCAL_TAR
+fi
+
+if [[ "$OPERATION" = "put" ]]
+then
+	LOCAL_TAR=(  "tar" "-c" $COMPRESS $VERBOSE "-f" "-" $SPEC)
+	REMOTE_TAR=( "tar" "-x" $COMPRESS "-f" "-" )
+	$LOCAL_TAR | ssh $REMOTE_HOST "(cd $REMOTE_DIR && $REMOTE_TAR)"
+fi

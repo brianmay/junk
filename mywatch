@@ -1,0 +1,66 @@
+#!/bin/sh
+
+tval=2;
+diff=""
+beep=""
+log=""
+
+doitonce() {
+	filenew="$1"; shift;
+	filecur="$1"; shift;
+	"$@" > "$filenew" 2>&1;
+	stat="$?";
+	if ! diff -qs "$filecur" "$filenew" > /dev/null; then
+		clear;
+		echo "Time interval: $tval";
+		echo "Last update:   `date`";
+		echo "Exit status:   $stat";
+		echo;
+		if [[ ! -z "$beep" ]]; then
+			echo -n ""
+		fi
+		if [[ ! -z "$diff" ]]; then
+			diff --side-by-side "$filecur" "$filenew";
+		else
+			cat "$filenew";
+		fi
+                if [[ -n "$log" ]]; then
+                        echo "********************************************************" >> "$log";
+                        echo "`date`, rc $stat" >> "$log";
+                        echo "--------------------------------------------------------" >> "$log";
+                        diff --side-by-side "$filecur" "$filenew" >> "$log";
+                        echo "--------------------------------------------------------" >> "$log";
+                        cat "$filenew" >> "$log";
+                fi;
+		cat "$filenew" > "$filecur";
+	fi
+}
+
+doit() {
+	while true; do
+		doitonce "$@";
+		sleep "$tval";
+	done
+}
+
+while getopts bdn:l:h name; do
+	case "$name" in
+	b)	beep=1;;
+	d)	diff=1;;
+	n)	tval="$OPTARG";;
+	l)	log="$OPTARG";;
+	*)	printf "Usage: %s: [-b] [-d] [-n value] [-l log] args\n"  $0
+		exit 2;;
+	esac
+done
+
+shift `expr $OPTIND - 1`
+
+TMPFILE1="`mktemp -t mywatch.XXXXXXXXXX`" || exit 1
+TMPFILE2="`mktemp -t mywatch.XXXXXXXXXX`" || exit 1
+cleanup() {
+        rm -f "$TMPFILE1" "$TMPFILE2"
+}
+trap cleanup 0
+
+doit "$TMPFILE1" "$TMPFILE2" "$@"

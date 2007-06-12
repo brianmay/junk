@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+
+while (<>)
+{
+	if ($debug) { print "1: $_"; }
+# remove comments
+	s/%.*//g;
+# remove \documentclass
+	s/\\documentclass.*{.*}//g;
+# remove \usepackage
+	s/\\usepackage.*{.*}//g;
+# remove \settowidth
+	s/\\settowidth.*{.*}//g;
+# remove \setlength
+	s/\\setlength.*{.*}.*{.*}//g;
+# remove \renewcommand
+	s/\\renewcommand.*{.*}.*{.*}//g;
+# remove \newenvironment
+	s/\\newenvironment.*{.*}\[.*\]//g;
+# remove \cite
+	s/\\cite.*{.*}//g;
+# remove \label
+	s/\\label.*{.*}//g;
+# remove \begin
+	s/\\begin.*{.*}//g;
+# remove \end
+	s/\\end.*{.*}//g;
+# remove \bibliography
+	s/\\bibliography.*{.*}//g;
+# remove \bibliographystyle
+	s/\\bibliographystyle.*{.*}//g;
+# remove \\ newline
+	s/\\\\/ /g;
+# remove blank override
+	s/\\ / /g;
+	s/~/ /g;
+# remove any other commands
+	s/\\\w+/ /g;
+# remove brackets
+	s/\{/ /g;
+	s/\}/ /g;
+# remove leading white space
+	s/^\s+//g;
+
+	$words = (@list = split(/[`\';:,.\s]+/));
+
+	if ($debug)
+	{
+		print "2: $_";
+		print "3: ";
+		foreach $word (@list)
+		{
+			print "$word+";
+		}
+		print "\n";
+		print "4: $words words in above line\n\n";
+	}
+
+	$total += $words;
+}
+
+print "There are $total words total\n";

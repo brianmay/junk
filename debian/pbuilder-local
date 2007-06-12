@@ -91,17 +91,13 @@ then
 fi
 
 cat <<EOF >>$TMPFILE
-#MIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian/"
-MIRRORSITE="http://snoopy.apana.org.au:9999/debian/"
-#MIRRORSITE="http://ftp.au.debian.org/debian/"
+MIRRORSITE="http://ftp.au.debian.org/debian/"
 EOF
 
 if [ "$DISTRIBUTION" = "woody" ]
 then
 cat <<EOF >>$TMPFILE
-#NONUSMIRRORSITE="http://10.0.1.62/apt-cacher/ftp.us.debian.org/debian-non-US/"
-NONUSMIRRORSITE="http://snoopy.apana.org.au:9999/non-US/"
-#NONUSMIRRORSITE="http://ftp.au.debian.org/debian-non-US/"
+NONUSMIRRORSITE="http://ftp.au.debian.org/debian-non-US/"
 EOF
 fi
 
