@@ -152,8 +152,8 @@ EOF
                         debsign "-k$KEY" "../$SOURCE""_$VERSION""_i386.changes"
                 fi
 	else
-		echo "pbuilder $COMMAND --override-config --configfile $TMPFILE"
-		pbuilder $COMMAND --override-config --configfile $TMPFILE
+		echo "sudo pbuilder $COMMAND --override-config --configfile $TMPFILE"
+		sudo pbuilder $COMMAND --override-config --configfile $TMPFILE
 	fi
 
 fi
