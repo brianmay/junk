@@ -4,16 +4,34 @@
 # you will probably want to change this to your house.  Unless you are coming to visit me.
 
 
-FROM="19 lenore st springvale"
-
 # No need to change this. Until Metlink changes their website.  Sigh.
 
-DEST=$@
-DATE=`date +%d`
-YEARMONTH=`date +%Y%m`
-HOUR=`date +%I`
-MIN=`date +%M`
-AMPM=`date +%P`
+FROM="$1"
+DEST="$2"
+WHEN="$3"
+
+if [ -z "$FROM" ]
+then
+        echo "No start point given" >&2
+        exit 1;
+fi
+
+if [ -z "$DEST" ]
+then
+        echo "No start point given" >&2
+        exit 1;
+fi
+
+if [ -z "$WHEN" ]
+then
+        WHEN="now"
+fi
+
+DATE=`date -d "$WHEN" +%d`
+YEARMONTH=`date -d "$WHEN" +%Y%m`
+HOUR=`date -d "$WHEN" +%I`
+MIN=`date -d "$WHEN" +%M`
+AMPM=`date -d "$WHEN" +%P`
 
 FROM=`echo "$FROM" | perl -MURI::Escape -lne 'print uri_escape($_)'`
 DEST=`echo "$DEST" | perl -MURI::Escape -lne 'print uri_escape($_)'`
