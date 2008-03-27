@@ -1,0 +1,26 @@
+#!/bin/bash
+# script to get next public transport
+# expects a destination on the command line, from address is hardcoded below. 
+# you will probably want to change this to your house.  Unless you are coming to visit me.
+
+
+FROM="19 lenore st springvale"
+
+# No need to change this. Until Metlink changes their website.  Sigh.
+
+DEST=$@
+DATE=`date +%d`
+YEARMONTH=`date +%Y%m`
+HOUR=`date +%I`
+MIN=`date +%M`
+AMPM=`date +%P`
+
+FROM=`echo "$FROM" | perl -MURI::Escape -lne 'print uri_escape($_)'`
+DEST=`echo "$DEST" | perl -MURI::Escape -lne 'print uri_escape($_)'`
+ 
+
+URL="http://jp.metlinkmelbourne.com.au/metlink/XSLT_TRIP_REQUEST2?language=en&sessionID=0&language=en&requestID=0&command=&itdLPxx_view=&execInst=&ptOptionsActive=1&itOptionsActive=1&useProxFootSearch=1&anySigWhenPerfectNoOtherMatches=1&type_origin=any&nameState_origin=empty&type_destination=any&nameState_destination=empty&nameDefaultText_origin=Enter+Address&execIdentifiedLoc_origin=1&execStopList_origin=0&nameDefaultText_destination=Enter+Address&execIdentifiedLoc_destination=1&execStopList_destination=0&ttpFrom=20060701&ttpTo=20070630&anyObjFilter_origin=29&name_origin=$FROM&anyObjFilter_destination=2&name_destination=$DEST&itdTripDateTimeDepArr=dep&itdDateDay=$DATE&itdDateYearMonth=$YEARMONTH&itdTimeHour=$HOUR&itdTimeMinute=$MIN&itdTimeAMPM=$AMPM"
+
+firefox $URL
+
+
