@@ -91,7 +91,8 @@ then
 fi
 
 cat <<EOF >>$TMPFILE
-MIRRORSITE="http://mirrors.uwa.edu.au/debian/"
+#MIRRORSITE="http://mirrors.uwa.edu.au/debian/"
+MIRRORSITE="http://ftp.au.debian.org/debian/"
 EOF
 
 if [ "$DISTRIBUTION" = "woody" ]
