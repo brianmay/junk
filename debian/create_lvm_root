@@ -1,0 +1,32 @@
+#!/bin/sh
+
+if [ -z "$1" ]
+then
+    echo "No name given" 1>&2
+fi
+
+set -ex
+
+DIST="$1"
+VG="aquitard"
+LV="schroot-$1"
+ARCH=""
+
+if [ "$2" = "i386" ]
+then
+    LV="$LV-i386"
+    ARCH="--arch=i386"
+fi
+
+#lvcreate -L2G -n "$LV" "$VG"
+#mkfs.ext4 "/dev/$VG/$LV"
+#mount "/dev/$VG/$LV" /mnt
+debootstrap $ARCH "$DIST" /mnt http://hq.in.vpac.org:9999/debian
+#debootstrap --keyring="$PWD/debian.gpg" "$DIST" /mnt http://hq.in.vpac.org:9999/debian
+echo 'APT::Install-Recommends "false";' > /mnt/etc/apt/apt.conf
+chmod 644 /mnt/etc/apt/apt.conf
+chroot /mnt apt-get update
+chroot /mnt apt-get upgrade
+chroot /mnt apt-get --yes install locales
+chroot /mnt apt-get --yes install build-essential devscripts fakeroot zsh
+umount /mnt
