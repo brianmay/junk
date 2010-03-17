@@ -29,7 +29,22 @@ VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
 DSC="$SOURCE"_"$VERSION".dsc
 CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
 
-debuild -us -uc -S
+session=`schroot -b -c "$DISTRIBUTION"`
+trap "schroot -e -c '$session'" 0 TERM INT QUIT
+schroot -r -c "$session" -u root -- apt-get --yes install devscripts lintian debhelper cdbs quilt
+schroot -r -c "$session" -- debuild -us -uc -S
+trap "" 0 TERM INT QUIT
+schroot -e -c "$session"
+
 cd ..
-sbuild -As --dist="$DISTRIBUTION" $DSC
+
+SRC_DIR="$PWD"
+BUILD_DIR="build/$DISTRIBUTION"
+if [ ! -d "$BUILD_DIR" ]
+then
+    mkdir -p "$BUILD_DIR"
+fi
+cd "$BUILD_DIR"
+
+sbuild -As --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
 debsign "$CHANGES"
