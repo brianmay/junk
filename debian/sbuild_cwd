@@ -1,19 +1,24 @@
 #!/bin/sh -ex
 
-TEMP=`getopt -o '' --long distribution: -n'sbuild_cwd' -- "$@"`
+TEMP=`getopt -o '' --long chroot:,rsign: -n'sbuild_cwd' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
 eval set -- "$TEMP"
 
-DISTRIBUTION="lenny"
+CHROOT="auto"
 
 while true
 do
 	case "$1" in
-	--distribution)
+	--chroot)
 		shift
-		DISTRIBUTION="$1"
+		CHROOT="$1"
+		shift;
+		;;
+	--rsign)
+		shift
+		RSIGN="$1"
 		shift;
 		;;
 	--)
@@ -26,15 +31,19 @@ done
 ARCH="`dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 SOURCE="`dpkg-parsechangelog|sed -n 's/^Source: //p'`"
 VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
+DISTRIBUTION="`dpkg-parsechangelog|sed -n 's/^Distribution: \(.*:\|\)//p'`"
 DSC="$SOURCE"_"$VERSION".dsc
 CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
+
+if [ "$CHROOT" = "auto" ]
+then
+    CHROOT="$DISTRIBUTION"
+fi
 
 session=`schroot -b -c "$DISTRIBUTION"`
 trap "schroot -e -c '$session'" 0 TERM INT QUIT
 schroot -r -c "$session" -u root -- apt-get --yes install devscripts lintian debhelper cdbs quilt
 schroot -r -c "$session" -- debuild -us -uc -S
-trap "" 0 TERM INT QUIT
-schroot -e -c "$session"
 
 cd ..
 
@@ -46,5 +55,15 @@ then
 fi
 cd "$BUILD_DIR"
 
-sbuild -As --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
-debsign "$CHANGES"
+sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
+
+schroot -r -c "$session" -- lintian "$CHANGES" || true
+trap "" 0 TERM INT QUIT
+schroot -e -c "$session"
+
+if [ -z "$RSIGN" ]
+then
+    debsign "$CHANGES"
+else
+    debrsign "$RSIGN" "$CHANGES"
+fi
