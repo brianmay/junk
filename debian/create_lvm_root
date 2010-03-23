@@ -18,9 +18,9 @@ then
     ARCH="--arch=i386"
 fi
 
-#lvcreate -L2G -n "$LV" "$VG"
-#mkfs.ext4 "/dev/$VG/$LV"
-#mount "/dev/$VG/$LV" /mnt
+lvcreate -L2G -n "$LV" "$VG"
+mkfs.ext4 "/dev/$VG/$LV"
+mount "/dev/$VG/$LV" /mnt
 debootstrap $ARCH "$DIST" /mnt http://hq.in.vpac.org:9999/debian
 #debootstrap --keyring="$PWD/debian.gpg" "$DIST" /mnt http://hq.in.vpac.org:9999/debian
 echo 'APT::Install-Recommends "false";' > /mnt/etc/apt/apt.conf
