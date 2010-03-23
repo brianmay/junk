@@ -28,12 +28,10 @@ do
 	esac
 done
 
-ARCH="`dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 SOURCE="`dpkg-parsechangelog|sed -n 's/^Source: //p'`"
 VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
 DISTRIBUTION="`dpkg-parsechangelog|sed -n 's/^Distribution: \(.*:\|\)//p'`"
 DSC="$SOURCE"_"$VERSION".dsc
-CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
 
 if [ "$CHROOT" = "auto" ]
 then
@@ -55,8 +53,10 @@ then
 fi
 cd "$BUILD_DIR"
 
-sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
+sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC" --debbuildopt "debug"
 
+ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
+CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
 schroot -r -c "$session" -- lintian "$CHANGES" || true
 trap "" 0 TERM INT QUIT
 schroot -e -c "$session"
