@@ -40,7 +40,7 @@ then
     CHROOT="$DISTRIBUTION"
 fi
 
-session=`schroot -b -c "$DISTRIBUTION"`
+session=`schroot -b -c "$CHROOT"`
 trap "schroot -e -c '$session'" 0 TERM INT QUIT
 schroot -r -c "$session" -u root -- apt-get --yes install devscripts lintian debhelper cdbs quilt
 schroot -r -c "$session" -- debuild -us -uc -S
