@@ -53,7 +53,7 @@ then
 fi
 cd "$BUILD_DIR"
 
-sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC" --debbuildopt "debug"
+sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
 
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
