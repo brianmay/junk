@@ -1,0 +1,9 @@
+#!/bin/sh -ex
+
+for i in "$@"
+do
+        j="`echo "$i" | sed 's/.ASF$/.avi/'`"
+        mencoder "$i" -oac pcm -ovc lavc -lavcopts vcodec=mjpeg  -o "$j" -ofps 24
+        #mencoder "$i" -oac copy -ovc lavc -lavcopts vcodec=mjpeg  -o "$j" -ofps 24
+done
+

@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+import apt_pkg;
+import os;
+import re;
+import tempfile;
+
+re_isdeb = re.compile (r"^(.+)_(.+?)_(.+?).deb$");
+re_issource = re.compile (r"(.+)_(.+?)\.(orig\.tar\.gz|diff\.gz|tar\.gz|dsc)$");
+
+def do_dir_index(prefix,rel_dir,files):
+   full_dir="%s/%s"%(prefix,rel_dir);
+   for j in os.listdir(full_dir):
+       if rel_dir == "":
+           rel_path = j;
+       else:
+           rel_path="%s/%s"%(rel_dir,j);
+
+       if full_dir == "":
+           full_path=j;
+       else:
+           full_path="%s/%s"%(full_dir,j);
+
+       if (os.path.isdir(full_path)):
+           do_dir_index(prefix,rel_path,files);
+       else:
+           if (j == "Packages.gz" or j == "Sources.gz"):
+               print "Uncompressing",rel_path;
+               temp_filename = tempfile.mktemp();
+               rc=os.system("gunzip -c %s > %s"%(full_path,temp_filename));
+               if (rc != 0):
+                       exit;
+
+               print "Loading",rel_path;
+               parser = apt_pkg.ParseTagFile(open(temp_filename,"r"));
+               while parser.Step():
+                   files[parser.Section.Find('Filename')] = 1;
+               os.unlink(temp_filename);
+
+def do_dir(prefix,rel_dir,files):
+   full_dir="%s/%s"%(prefix,rel_dir);
+   for j in os.listdir(full_dir):
+       if rel_dir == "":
+           rel_path = j;
+       else:
+           rel_path="%s/%s"%(rel_dir,j);
+
+       if full_dir == "":
+           full_path=j;
+       else:
+           full_path="%s/%s"%(full_dir,j);
+
+       if (os.path.isdir(full_path)):
+           do_dir(prefix,rel_path,files);
+       else:
+           m = re_isdeb.match(j);
+           if (m == None):
+               m = re_issource.match(j);
+
+           if (m != None):
+               if (not files.has_key(rel_path)):
+                   print "unlink(%s)"%(rel_path);
+                   os.unlink(full_path);
+
+root = "/var/cache/apt-proxy"
+dirs = [ "debian", "non-US", "security" ];
+
+for i in dirs:
+   dir_main = "%s/%s" % (root,i);
+   print "Processing",dir_main;
+   files = {};
+
+   do_dir_index(dir_main,"",files);
+   do_dir(dir_main,"",files);
