@@ -1,28 +1,37 @@
 #!/bin/sh
+set -ex
 
 if [ -z "$1" ]
 then
-    echo "No name given" 1>&2
+    echo "No distro name given" 1>&2
+    exit 1
 fi
-
-set -ex
-
 DIST="$1"
+shift
+
+if [ -z "$1" ]
+then
+    echo "No suite name given" 1>&2
+    exit 1
+fi
+SUITE="$1"
+shift
+
 VG="aquitard"
-LV="schroot-$1"
+LV="schroot-$SUITE"
 ARCH=""
 
-if [ "$2" = "i386" ]
+if [ "$1" = "i386" ]
 then
     LV="$LV-i386"
     ARCH="--arch=i386"
 fi
 
-#lvcreate -L2G -n "$LV" "$VG"
-#mkfs.ext4 "/dev/$VG/$LV"
-#mount "/dev/$VG/$LV" /mnt
-debootstrap $ARCH "$DIST" /mnt http://hq.in.vpac.org:9999/debian
-#debootstrap --keyring="$PWD/debian.gpg" "$DIST" /mnt http://hq.in.vpac.org:9999/debian
+lvcreate -L2G -n "$LV" "$VG"
+mkfs.ext4 "/dev/$VG/$LV"
+mount "/dev/$VG/$LV" /mnt
+debootstrap $ARCH "$SUITE" /mnt "http://hq.in.vpac.org:9999/$DIST"
+#debootstrap --keyring="$PWD/debian.gpg" "$SUITE" /mnt http://hq.in.vpac.org:9999/debian
 echo 'APT::Install-Recommends "false";' > /mnt/etc/apt/apt.conf
 chmod 644 /mnt/etc/apt/apt.conf
 chroot /mnt apt-get update
