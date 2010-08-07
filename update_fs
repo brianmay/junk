@@ -1,0 +1,8 @@
+#!/bin/sh
+set -ex
+
+rsync -avP --delete --exclude conf --exclude db --exclude log --exclude recordings --exclude run --exclude storage --exclude conf.sample \
+    ~/tree/freeswitch/debian/tmp/opt/freeswitch root@huey.microcomaustralia.com.au:/opt
+
+rsync -avP --delete --exclude conf --exclude db --exclude log --exclude recordings --exclude run --exclude storage \
+    ~/tree/freeswitch/debian/tmp/opt/freeswitch/conf/ root@huey.microcomaustralia.com.au:/opt/freeswitch/conf.sample
