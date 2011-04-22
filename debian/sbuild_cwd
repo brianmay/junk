@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-TEMP=`getopt -o '' --long chroot:,username: -n'sbuild_cwd' -- "$@"`
+TEMP=`getopt -o '' --long chroot:,key:,username: -n'sbuild_cwd' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
