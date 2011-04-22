@@ -6,6 +6,8 @@ if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
 eval set -- "$TEMP"
 
+USERNAME=""
+KEY=""
 CHROOT="auto"
 
 while true
