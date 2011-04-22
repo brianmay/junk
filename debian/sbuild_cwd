@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-TEMP=`getopt -o '' --long chroot:,rsign: -n'sbuild_cwd' -- "$@"`
+TEMP=`getopt -o '' --long chroot:,username: -n'sbuild_cwd' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -16,9 +16,9 @@ do
 		CHROOT="$1"
 		shift;
 		;;
-	--rsign)
+	--username)
 		shift
-		RSIGN="$1"
+		USERNAME="$1"
 		shift;
 		;;
 	--)
@@ -61,9 +61,9 @@ schroot -r -c "$session" -- lintian "$CHANGES" || true
 trap "" 0 TERM INT QUIT
 schroot -e -c "$session"
 
-if [ -z "$RSIGN" ]
+if [ -z "$USERNAME" ]
 then
     debsign "$CHANGES"
 else
-    debrsign "$RSIGN" "$CHANGES"
+    debrsign "$USERNAME" "$CHANGES"
 fi
