@@ -6,6 +6,7 @@ if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
 eval set -- "$TEMP"
 
+OPTS=""
 USERNAME=""
 KEY=""
 CHROOT="auto"
@@ -52,22 +53,18 @@ schroot -r -c "$session" -u root -- mk-build-deps debian/control
 schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_all.deb"
 schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
 schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_all.deb"
-schroot -r -c "$session" -- debuild -us -uc -S
 
-cd ..
-
-SRC_DIR="$PWD"
-BUILD_DIR="build/$SRC_DISTRIBUTION"
-if [ ! -d "$BUILD_DIR" ]
+if [ -d .git ]
 then
-    mkdir -p "$BUILD_DIR"
+    schroot -r -c "$session" -u root -- apt-get --yes install git-buildpackage
+    schroot -r -c "$session" -- git-buildpackage -uc -us $OPTS
+else
+    schroot -r -c "$session" -- debuild -uc -us $OPTS
 fi
-cd "$BUILD_DIR"
-
-sbuild -As --chroot="$CHROOT" --dist="$SRC_DISTRIBUTION" "$SRC_DIR/$DSC"
 
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
-CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
+CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+
 schroot -r -c "$session" -- lintian "$CHANGES" || true
 
 schroot -e -c "$session"
