@@ -69,6 +69,10 @@ fi
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
 
+DISTRIBUTION="`echo "$CHROOT" | sed 's/-i386//'`"
+sed "s/^Distribution:\s*\(.*\)\s*$/Distribution: $DISTRIBUTION/" < "$CHANGES" > "$CHANGES.new"
+mv "$CHANGES.new" "$CHANGES"
+
 schroot -r -c "$session" -- lintian "$CHANGES" || true
 
 schroot -e -c "$session"
@@ -91,3 +95,7 @@ else
     fi
 fi
 
+if [ "$SRC_DISTRIBUTION" != "$DISTRIBUTION" ]
+then
+    echo "Distribution was changed from $SRC_DISTRIBUTION to $DISTRIBUTION"
+fi
