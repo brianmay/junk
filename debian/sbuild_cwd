@@ -37,12 +37,12 @@ done
 
 SOURCE="`dpkg-parsechangelog|sed -n 's/^Source: //p'`"
 VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
-DISTRIBUTION="`dpkg-parsechangelog|sed -n 's/^Distribution: \(.*:\|\)//p'`"
+SRC_DISTRIBUTION="`dpkg-parsechangelog|sed -n 's/^Distribution: \(.*:\|\)//p'`"
 DSC="$SOURCE"_"$VERSION".dsc
 
 if [ "$CHROOT" = "auto" ]
 then
-    CHROOT="$DISTRIBUTION"
+    CHROOT="$SRC_DISTRIBUTION"
 fi
 
 session=`schroot -b -c "$CHROOT"`
@@ -53,20 +53,21 @@ schroot -r -c "$session" -- debuild -us -uc -S
 cd ..
 
 SRC_DIR="$PWD"
-BUILD_DIR="build/$DISTRIBUTION"
+BUILD_DIR="build/$SRC_DISTRIBUTION"
 if [ ! -d "$BUILD_DIR" ]
 then
     mkdir -p "$BUILD_DIR"
 fi
 cd "$BUILD_DIR"
 
-sbuild -As --chroot="$CHROOT" --dist="$DISTRIBUTION" "$SRC_DIR/$DSC"
+sbuild -As --chroot="$CHROOT" --dist="$SRC_DISTRIBUTION" "$SRC_DIR/$DSC"
 
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 CHANGES="$SOURCE"_"$VERSION"_"$ARCH".changes
 schroot -r -c "$session" -- lintian "$CHANGES" || true
-trap "" 0 TERM INT QUIT
+
 schroot -e -c "$session"
+trap "" 0 TERM INT QUIT
 
 if [ -z "$KEY" ]
 then
