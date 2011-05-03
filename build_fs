@@ -8,10 +8,11 @@ then
 fi
 #trap "echo 'clean up: schroot -e -c $session'" 0 TERM INT QUIT
 trap "schroot -e -c '$session'" 0 TERM INT QUIT
-schroot -r -c "$session" -u root -- apt-get --yes install debhelper automake autoconf libtool unixodbc-dev libasound2-dev libcurl3-openssl-dev libssl-dev ncurses-dev libogg-dev libvorbis-dev libperl-dev libgdbm-dev libdb-dev libgnutls-dev libtiff4-dev python libx11-dev uuid-dev
+schroot -r -c "$session" -u root -- apt-get --yes install debhelper automake autoconf libtool unixodbc-dev libasound2-dev libcurl3-openssl-dev libssl-dev ncurses-dev libogg-dev libvorbis-dev libperl-dev libgdbm-dev libdb-dev libgnutls-dev libtiff4-dev python libx11-dev uuid-dev python-dev git-core
 schroot -r -c "$session" -- dpkg-checkbuilddeps
-schroot -r -c "$session" -u root -- debian/rules clean
-schroot -r -c "$session" -- ./configure --prefix=/opt/freeswitch --enable-core-libedit-support --enable-core-odbc-support --with-libcurl --with-openssl
+#schroot -r -c "$session" -u root -- debian/rules clean
+#schroot -r -c "$session" -- ./bootstrap.sh
+#schroot -r -c "$session" -- ./configure --prefix=/opt/freeswitch --enable-core-libedit-support --enable-core-odbc-support --with-libcurl --with-openssl
 schroot -r -c "$session" -- make
 
 umask 022
