@@ -1,0 +1,66 @@
+#!/bin/sh
+set -ex
+
+if [ -z "$1" ]
+then
+    echo "No distro name given" 1>&2
+    exit 1
+fi
+DIST="$1"
+shift
+
+if [ -z "$1" ]
+then
+    echo "No suite name given" 1>&2
+    exit 1
+fi
+SUITE="$1"
+shift
+
+if [ "$1" = "amd64" ]
+then
+    NAME="$SUITE"
+elif [ "$1" = "i386" ]
+then
+    NAME="$SUITE-i386"
+    ARCH="--arch=i386"
+else
+    echo "Unknown cpu type $1" 1>&2
+    exit 1
+fi
+
+case "$(hostname)" in
+aquitard)
+	VG="aquitard"
+	LV="schroot-$NAME"
+	ARCH=""
+
+	DIR="/mnt"
+	UMOUNT="yes"
+
+	lvcreate -L2G -n "$LV" "$VG"
+	mkfs.ext4 "/dev/$VG/$LV"
+	mount "/dev/$VG/$LV" "$DIR"
+	;;
+
+merlock)
+	DIR="/srv/chroot/$NAME"
+	UMOUNT=""
+	;;
+
+*)	echo "Unknown host $HOSTNAME" 1>&2
+	exit 1
+esac
+
+debootstrap $ARCH "$SUITE" "$DIR" "http://proxy.pri:9999/$DIST"
+echo 'APT::Install-Recommends "false";' > "$DIR"/etc/apt/apt.conf
+chmod 644 "$DIR"/etc/apt/apt.conf
+chroot "$DIR" apt-get update
+chroot "$DIR" apt-get upgrade
+chroot "$DIR" apt-get --yes install locales
+chroot "$DIR" apt-get --yes install build-essential devscripts fakeroot zsh
+
+if [ -n "$UMOUNT" ]
+then
+	umount "$DIR"
+fi

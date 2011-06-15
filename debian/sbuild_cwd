@@ -52,11 +52,12 @@ fi
 
 session=`schroot -b -c "$CHROOT"`
 trap "schroot -e -c '$session'" 0 TERM INT QUIT
+schroot -r -c "$session" -u root -- rm -f "$SOURCE-build-deps_1.0_"*".deb"
 schroot -r -c "$session" -u root -- apt-get --yes install devscripts equivs lintian
 schroot -r -c "$session" -u root -- mk-build-deps debian/control
-schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_all.deb"
+schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_"*".deb"
 schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
-schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_all.deb"
+schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_"*".deb"
 
 if [ -d .git ]
 then

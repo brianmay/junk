@@ -1,8 +1,13 @@
 #!/bin/sh
 set -ex
+HOST=root@huey.microcomaustralia.com.au
 
-rsync -avP --delete --exclude conf --exclude db --exclude log --exclude recordings --exclude run --exclude storage --exclude conf.sample \
-    ~/tree/freeswitch/debian/tmp/opt/freeswitch root@huey.microcomaustralia.com.au:/opt
+sudo chmod go+rX -R debian/tmp
 
-rsync -avP --delete --exclude conf --exclude db --exclude log --exclude recordings --exclude run --exclude storage \
-    ~/tree/freeswitch/debian/tmp/opt/freeswitch/conf/ root@huey.microcomaustralia.com.au:/opt/freeswitch/conf.sample
+rsync debian/tmp/usr/lib/python2.5/site-packages/freeswitch.py "$HOST":/usr/local/lib/python2.5/site-packages/freeswitch.py
+
+rsync -avP --delete --exclude conf --exclude scripts --exclude db --exclude log --exclude recordings --exclude run --exclude storage --exclude conf.sample \
+    ~/tree/freeswitch/debian/tmp/opt/freeswitch "$HOST":/opt
+
+rsync -avP --delete \
+    ~/tree/freeswitch/debian/tmp/opt/freeswitch/conf/ "$HOST":/opt/freeswitch/conf.sample
