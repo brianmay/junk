@@ -20,6 +20,7 @@ shift
 if [ "$1" = "amd64" ]
 then
     NAME="$SUITE"
+    ARCH="--arch=amd64"
 elif [ "$1" = "i386" ]
 then
     NAME="$SUITE-i386"
@@ -29,14 +30,14 @@ else
     exit 1
 fi
 
-case "$(hostname)" in
+case "$(hostname --short)" in
 aquitard)
 	VG="aquitard"
 	LV="schroot-$NAME"
-	ARCH=""
 
 	DIR="/mnt"
 	UMOUNT="yes"
+	MIRROR="http://proxy.pri:9999/$DIST"
 
 	lvcreate -L2G -n "$LV" "$VG"
 	mkfs.ext4 "/dev/$VG/$LV"
@@ -46,13 +47,17 @@ aquitard)
 merlock)
 	DIR="/srv/chroot/$NAME"
 	UMOUNT=""
+	MIRROR="http://proxy.pri:9999/$DIST"
 	;;
 
-*)	echo "Unknown host $HOSTNAME" 1>&2
-	exit 1
+*)
+	DIR="/srv/chroot/$NAME"
+	UMOUNT=""
+	MIRROR="http://ftp.au.debian.org/$DIST"
+	;;
 esac
 
-debootstrap $ARCH "$SUITE" "$DIR" "http://proxy.pri:9999/$DIST"
+debootstrap "$ARCH" "$SUITE" "$DIR" "$MIRROR"
 echo 'APT::Install-Recommends "false";' > "$DIR"/etc/apt/apt.conf
 chmod 644 "$DIR"/etc/apt/apt.conf
 chroot "$DIR" apt-get update
