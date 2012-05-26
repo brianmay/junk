@@ -1,0 +1,20 @@
+#!/bin/sh
+set -ex
+
+cleanup()
+{
+    echo "Caught Signal ... cleaning up."
+    [ -n "$session" ] && schroot -e -c "$session"
+    session=""
+    exit 1
+}
+
+CHROOT=natty
+session=`schroot -b -c "$CHROOT"`
+trap cleanup 0 HUP INT QUIT TERM
+
+schroot -r -c "$session" -u root -- apt-get --yes install dput python-bzrlib python-paramiko
+schroot -r -c "$session" -u "$USER" -p -- dput "$@"
+
+schroot -e -c "$session"
+trap "" 0 TERM INT QUIT TERM

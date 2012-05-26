@@ -1,0 +1,63 @@
+#!/bin/sh -e
+
+TONE_INSERT="/usr/share/sounds/freedesktop/stereo/phone-incoming-call.oga"
+TONE_ERROR="/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga"
+TONE_REMOVE="/usr/share/sounds/freedesktop/stereo/complete.oga"
+TONE_FINISH="/usr/share/sounds/freedesktop/stereo/suspend-error.oga"
+
+while true
+do
+	echo -n "Waiting for link up... "
+	while [ "$detect" != "yes" ]
+	do
+		sleep 1
+		detect=$(ethtool  eth0  | sed -n 's/.*Link detected: \(.*\)$/\1/p')
+	done
+	echo "Done."
+
+	play "$TONE_INSERT"
+
+	speed=$(ethtool  eth0  | sed -n 's/.*Speed: \(.*\)$/\1/p')
+	if [ "$speed" != "1000Mb/s" ]
+	then
+		echo "Wrong speed of $speed" >&2
+		play "$TONE_ERROR"
+		exit 1
+	fi
+	echo "speed: $speed"
+
+	date
+	iperf -c hqrouter.vpac.org | tee /tmp/out
+	date
+
+	speed=$(tail -1 /tmp/out | awk '{print $7}')
+	units=$(tail -1 /tmp/out | awk '{print $8}')
+	echo "tested speed: $speed"
+	if [ "$speed" = "" ]
+	then
+		echo "iperf failed to produce a result" >&2
+		play "$TONE_ERROR"
+		exit
+	fi
+	if [ "$speed" -lt 850 ] || [ "$units" != "Mbits/sec" ]
+	then
+		echo "Wrong speed $speed $units" >&2
+		play "$TONE_ERROR"
+		exit
+	fi
+
+	play "$TONE_REMOVE"
+
+	echo -n "Waiting for link down... "
+	while [ "$detect" != "no" ]
+	do
+		sleep 1
+		detect=$(ethtool  eth0  | sed -n 's/.*Link detected: \(.*\)$/\1/p')
+	done
+	echo "Done."
+
+	play "$TONE_FINISH"
+
+	echo ""
+	echo ""
+done

@@ -1,0 +1,19 @@
+#!/usr/bin/perl -w
+
+foreach (<>) {
+        @a=split("",$_);
+        $i=0;
+        $sep="";
+        foreach $w (@a) {
+                printf($sep."%08b",ord($w));
+                if ($i<6) {
+                        $sep=" ";
+                        $i = $i + 1;
+                } else {
+                        $sep="";
+                        print "\n";
+                        $i = 0;
+                }
+        }
+}
+print "\n";

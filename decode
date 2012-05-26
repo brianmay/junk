@@ -1,0 +1,9 @@
+#!/usr/bin/perl -w
+
+foreach (<>) {
+        @a=split(" ",$_);
+        foreach $w (@a) {
+                print chr(oct("0b".$w));
+        }
+}
+print "\n";

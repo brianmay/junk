@@ -1,0 +1,48 @@
+#!/bin/sh
+
+set -e
+find -type l | while read i
+do
+    j="$(readlink "$i")"
+    base="$(basename "$i")"
+    dir="$(dirname "$i")"
+
+    src=""
+    try=""
+    if [ -e "$dir/$j" ]
+    then
+        src="$dir/$j"
+
+    elif [ "$(dirname "$dir")" = "./git/Pictures/others/2001_06_29 Rose and Zac's Wedding/Original" ]
+    then
+        for trydir in "./git/Pictures/others/2001_06_29 Rose and Zac's Wedding/Enhanced/large/"*
+        do
+            try="$trydir/$base"
+            if [ -e "$try" ] && [ ! -h "$try" ] && [ -n "$src" ]
+            then
+                echo "Already got a src for $i of $src but found $try" 1>&2
+                exit 1
+            elif [ -e "$try" ]
+            then
+                src="$try";
+            fi
+        done
+    fi
+
+    if [ -z "$src" ]
+    then
+        echo "Cannot find src for $i" 1>&2
+        exit 1
+    fi
+
+    if [ ! -e "$src" ]
+    then
+        echo "WTF! Cannot find src for $i" 1>&2
+        exit 1
+    fi
+
+    echo "$src to $i"
+    rm "$i";
+#    cp -p "$src" "$i";
+    mv "$src" "$i";
+done

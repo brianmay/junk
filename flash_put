@@ -1,0 +1,6 @@
+#!/bin/sh -ex
+#sudo $HOME/tmp/diskdev_cmds-332.11/fsck_hfs.tproj/fsck_hfs /dev/sda3
+#pmount -w /dev/sda3
+#sudo chown -R bam:microcom /media/sda3/cgc
+rsync -avP --update $HOME/cgc /media/'Brian May'
+#pumount /dev/sda3

@@ -1,0 +1,115 @@
+#!/bin/sh -ex
+
+TEMP=`getopt -o '' --long sa,chroot:,key:,username:,testing -n'sbuild_cwd' -- "$@"`
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+OPTS=""
+USERNAME=""
+KEY=""
+CHROOT="auto"
+TESTING=""
+
+while true
+do
+	case "$1" in
+	--sa)
+		shift
+		OPTS="$OPTS -sa"
+		;;
+	--chroot)
+		shift
+		CHROOT="$1"
+		shift;
+		;;
+	--key)
+		shift
+		KEY="$1"
+		shift;
+		;;
+	--username)
+		shift
+		USERNAME="$1"
+		shift;
+		;;
+	--testing)
+		shift
+		TESTING="yes"
+		;;
+	--)
+		shift;
+		break ;;
+	*) echo "Internal error!" ; exit 1 ;;
+	esac
+done
+
+if [ -z "$1" ] || [ -z "$2" ]
+then
+    echo "Need to supply source and version to build"
+    exit 1
+fi
+
+SOURCE="$1"
+VERSION="$2"
+UPSTREAM="`echo "$VERSION"|sed 's/-[0-9]\+$//'`"
+
+gitpkg "debian/$VERSION"
+cd "../deb-packages/$SOURCE/$SOURCE-$UPSTREAM"
+
+SOURCE="`dpkg-parsechangelog|sed -n 's/^Source: //p'`"
+VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
+UPSTREAM="`echo "$VERSION"|sed 's/-[0-9]\+$//'`"
+SRC_DISTRIBUTION="`dpkg-parsechangelog|sed -n 's/^Distribution: \(.*:\|\)//p'`"
+DSC="$SOURCE"_"$VERSION".dsc
+
+if [ "$CHROOT" = "auto" ]
+then
+    CHROOT="$SRC_DISTRIBUTION"
+fi
+
+session=`schroot -b -c "$CHROOT"`
+trap "schroot -e -c '$session'" EXIT TERM HUP INT QUIT
+schroot -r -c "$session" -u root -- rm -f "$SOURCE-build-deps_1.0_"*".deb"
+schroot -r -c "$session" -u root -- apt-get --yes install devscripts equivs lintian
+schroot -r -c "$session" -u root -- "$HOME/tree/devscripts/scripts/mk-build-deps.pl" debian/control
+schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_"*".deb"
+schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
+schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_"*".deb"
+#schroot -r -c "$session" -- debuild -uc -us $OPTS
+schroot -r -c "$session" -- dpkg-buildpackage -uc -us -rfakeroot
+
+ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
+CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+
+DISTRIBUTION="`echo "$CHROOT" | sed 's/-i386//'`"
+sed "s/^Distribution:\s*\(.*\)\s*$/Distribution: $DISTRIBUTION/" < "$CHANGES" > "$CHANGES.new"
+mv "$CHANGES.new" "$CHANGES"
+
+schroot -r -c "$session" -- lintian -I "$CHANGES" || true
+
+schroot -e -c "$session"
+trap "" EXIT TERM HUP INT QUIT
+
+if [ -z "$KEY" ]
+then
+    if [ -z "$USERNAME" ]
+    then
+        debsign "$CHANGES"
+    else
+        debrsign "$USERNAME" "$CHANGES"
+    fi
+else
+    if [ -z "$USERNAME" ]
+    then
+        debsign "-k$KEY" "$CHANGES"
+    else
+        debrsign "-k$KEY" "$USERNAME" "$CHANGES"
+    fi
+fi
+
+if [ "$SRC_DISTRIBUTION" != "$DISTRIBUTION" ]
+then
+    echo "Distribution was changed from $SRC_DISTRIBUTION to $DISTRIBUTION"
+fi
