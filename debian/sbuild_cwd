@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-TEMP=`getopt -o '' --long sa,chroot:,key:,username: -n'sbuild_cwd' -- "$@"`
+TEMP=`getopt -o '' --long sa,chroot:,key:,username:,testing -n'sbuild_cwd' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -10,6 +10,7 @@ OPTS=""
 USERNAME=""
 KEY=""
 CHROOT="auto"
+TESTING=""
 
 while true
 do
@@ -33,6 +34,10 @@ do
 		USERNAME="$1"
 		shift;
 		;;
+	--testing)
+		shift
+		TESTING="yes"
+		;;
 	--)
 		shift;
 		break ;;
@@ -51,20 +56,22 @@ then
 fi
 
 session=`schroot -b -c "$CHROOT"`
-trap "schroot -e -c '$session'" 0 TERM INT QUIT
+trap "schroot -e -c '$session'" EXIT TERM HUP INT QUIT
 schroot -r -c "$session" -u root -- rm -f "$SOURCE-build-deps_1.0_"*".deb"
 schroot -r -c "$session" -u root -- apt-get --yes install devscripts equivs lintian
-schroot -r -c "$session" -u root -- mk-build-deps debian/control
+schroot -r -c "$session" -u root -- "$HOME/tree/devscripts/scripts/mk-build-deps.pl" debian/control
 schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_"*".deb"
 schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
 schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_"*".deb"
 
-if [ -d .git ]
+if [ -d .git -a -z "$TESTING" ]
 then
     schroot -r -c "$session" -u root -- apt-get --yes install git-buildpackage
     schroot -r -c "$session" -- git-buildpackage -uc -us $OPTS
 else
-    schroot -r -c "$session" -- debuild -uc -us $OPTS
+#    schroot -r -c "$session" -- debuild -uc -us $OPTS
+    schroot -r -c "$session" -- fakeroot debian/rules clean
+    schroot -r -c "$session" -- debian/rules build
 fi
 
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
@@ -74,10 +81,10 @@ DISTRIBUTION="`echo "$CHROOT" | sed 's/-i386//'`"
 sed "s/^Distribution:\s*\(.*\)\s*$/Distribution: $DISTRIBUTION/" < "$CHANGES" > "$CHANGES.new"
 mv "$CHANGES.new" "$CHANGES"
 
-schroot -r -c "$session" -- lintian "$CHANGES" || true
+schroot -r -c "$session" -- lintian -I "$CHANGES" || true
 
 schroot -e -c "$session"
-trap "" 0 TERM INT QUIT
+trap "" EXIT TERM HUP INT QUIT
 
 if [ -z "$KEY" ]
 then

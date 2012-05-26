@@ -3,14 +3,14 @@ set -e
 
 for i in `schroot -l`; do
     case "$i" in
-    centos*-source)
+    source:centos*)
         echo ""
         echo "$i -- yum"
         echo "-------------------------------------------"
         schroot -c "$i" -- yum update
         echo "-------------------------------------------"
         ;;
-    *-source)
+    source:*)
         echo ""
         echo "$i -- apt-get"
         echo "-------------------------------------------"

@@ -37,7 +37,7 @@ aquitard)
 
 	DIR="/mnt"
 	UMOUNT="yes"
-	MIRROR="http://proxy.pri:9999/$DIST"
+	MIRROR="http://hq.in.vpac.org:9999/$DIST"
 
 	lvcreate -L2G -n "$LV" "$VG"
 	mkfs.ext4 "/dev/$VG/$LV"
