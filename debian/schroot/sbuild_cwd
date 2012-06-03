@@ -69,9 +69,7 @@ then
     schroot -r -c "$session" -u root -- apt-get --yes install git-buildpackage
     schroot -r -c "$session" -- git-buildpackage -uc -us $OPTS
 else
-#    schroot -r -c "$session" -- debuild -uc -us $OPTS
-    schroot -r -c "$session" -- fakeroot debian/rules clean
-    schroot -r -c "$session" -- debian/rules build
+    schroot -r -c "$session" -- debuild -uc -us $OPTS
 fi
 
 ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
