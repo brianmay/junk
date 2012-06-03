@@ -43,7 +43,7 @@ umask 022
 schroot -r -c "$session" -u root -- rm -rf "$PWD/debian/tmp"
 schroot -r -c "$session" -u root -- make DESTDIR="$PWD/debian/tmp" install
 schroot -r -c "$session" -- make DESTDIR="$PWD/debian/tmp" samples-conf
-ln -s ../freeswitch-sounds/* .
+ln -sf ../freeswitch-sounds/* .
 for i in cd-sounds-install cd-moh-install uhd-sounds-install uhd-moh-install hd-sounds-install hd-moh-install sounds-install moh-install
 do
     schroot -r -c "$session" -u root -- make DESTDIR="$PWD/debian/tmp" "$i"
