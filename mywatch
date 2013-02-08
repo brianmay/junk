@@ -16,19 +16,19 @@ doitonce() {
 		echo "Last update:   `date`";
 		echo "Exit status:   $stat";
 		echo;
-		if [[ ! -z "$beep" ]]; then
+		if [ ! -z "$beep" ]; then
 			echo -n ""
 		fi
-		if [[ ! -z "$diff" ]]; then
-			diff --side-by-side "$filecur" "$filenew";
+		if [ ! -z "$diff" ]; then
+			diff -u "$filecur" "$filenew";
 		else
 			cat "$filenew";
 		fi
-                if [[ -n "$log" ]]; then
+                if [ -n "$log" ]; then
                         echo "********************************************************" >> "$log";
                         echo "`date`, rc $stat" >> "$log";
                         echo "--------------------------------------------------------" >> "$log";
-                        diff --side-by-side "$filecur" "$filenew" >> "$log";
+                        diff -u "$filecur" "$filenew" >> "$log";
                         echo "--------------------------------------------------------" >> "$log";
                         cat "$filenew" >> "$log";
                 fi;
