@@ -61,7 +61,6 @@ schroot -r -c "$session" -u root -- apt-get --yes install devscripts equivs lint
 schroot -r -c "$session" -u root -- "$HOME/tree/devscripts/scripts/mk-build-deps.pl" debian/control
 schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_"*".deb"
 schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
-schroot -r -c "$session" -u root -- bash
 schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_"*".deb"
 
 if [ -d .git ]
