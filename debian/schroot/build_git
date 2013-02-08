@@ -58,22 +58,18 @@ then
     exit 1
 fi
 
-if [ -z "$1" ]
-then
-    echo "Need to supply version to build" >&2
-    exit 1
-fi
-
-VERSION="$1"
-shift
-
+git config gitpkg.admin-config-hook "$HOME/tree/junk/debian/schroot/gitpkg-hooks/admin-config-hook"
+git config gitpkg.deb-export-hook  "$HOME/tree/debian/gitpkg/hooks/debcherry-deb-export-hook"
+git config gitpkg.exit-hook "$HOME/tree/junk/debian/schroot/gitpkg-hooks/exit-hook"
+git config gitpkg.force-overwrite-orig never
 
 (
+    export PATH=/home/brian/tree/debian/gitpkg:$PATH
     export DEB_BUILD_OPTS="$OPTS"
     export DEB_BUILD_CHROOT="$CHROOT"
     export DEB_BUILD_CHROOT_FORCE="$CHROOT_FORCE"
     export DEB_BUILD_KEY="$KEY"
     export DEB_BUILD_USERNAME="$USERNAME"
     export DEB_BUILD_TYPE="$TYPE"
-    gitpkg "debian/$VERSION"
+    gitpkg "$@"
 )
