@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-TEMP=`getopt -o '' --long sa,chroot:,key:,username:,testing -n'sbuild_cwd' -- "$@"`
+TEMP=`getopt -o '' --long sa,sd,chroot:,key:,username:,build:,mode:,testing -n'sbuild_cwd' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -10,6 +10,14 @@ OPTS=""
 USERNAME=""
 KEY=""
 CHROOT="auto"
+BUILD=""
+MODE="raw"
+TESTING=""
+
+if [ -d .git ]
+then
+    MODE="git"
+fi
 
 while true
 do
@@ -17,6 +25,10 @@ do
 	--sa)
 		shift
 		OPTS="$OPTS -sa"
+		;;
+	--sd)
+		shift
+		OPTS="$OPTS -sd"
 		;;
 	--chroot)
 		shift
@@ -33,9 +45,19 @@ do
 		USERNAME="$1"
 		shift;
 		;;
+	--build)
+		shift
+		BUILD="$BUILD $1"
+		shift;
+		;;
+	--mode)
+		shift
+		MODE="$1"
+		shift;
+		;;
 	--testing)
 		shift
-		[ -d .git ] && OPTS="$OPTS --git-ignore-new"
+		TESTING="yes"
 		;;
 	--)
 		shift;
@@ -43,6 +65,11 @@ do
 	*) echo "Internal error!" ; exit 1 ;;
 	esac
 done
+
+if [ -z "$BUILD" ]
+then
+    BUILD="all"
+fi
 
 SOURCE="`dpkg-parsechangelog|sed -n 's/^Source: //p'`"
 VERSION="`dpkg-parsechangelog|sed -n 's/^Version: \(.*:\|\)//p'`"
@@ -63,42 +90,71 @@ schroot -r -c "$session" -u root -- dpkg --unpack "$SOURCE-build-deps_1.0_"*".de
 schroot -r -c "$session" -u root -- apt-get -f --yes --no-install-recommends install
 schroot -r -c "$session" -u root -- rm "$SOURCE-build-deps_1.0_"*".deb"
 
-if [ -d .git ]
-then
-    schroot -r -c "$session" -u root -- apt-get --yes install git-buildpackage
-    schroot -r -c "$session" -- git-buildpackage -uc -us $OPTS
-else
-    schroot -r -c "$session" -- debuild -uc -us $OPTS
-fi
+for build in $BUILD
+do
+    THE_OPTS="$OPTS"
+    ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
 
-ARCH="`schroot -r -c "$session" -- dpkg-architecture | sed -n 's/^DEB_BUILD_ARCH=//p'`"
-CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+    if [ "$build" = "all" ]
+    then
+        THE_OPTS="$THE_OPTS -F"
+        CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+    elif [ "$build" = "arch-dependent" ]
+    then
+        THE_OPTS="$THE_OPTS -B"
+        CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+    elif [ "$build" = "arch-independent" ]
+    then
+        THE_OPTS="$THE_OPTS -A"
+        CHANGES=../"$SOURCE"_"$VERSION"_"$ARCH".changes
+    elif [ "$build" = "source" ]
+    then
+        THE_OPTS="$THE_OPTS -S"
+        CHANGES=../"$SOURCE"_"$VERSION"_source.changes
+    else
+        echo "Unknown build $build" >&2
+        exit 1
+    fi
 
-DISTRIBUTION="`echo "$CHROOT" | sed 's/-i386//'`"
-sed "s/^Distribution:\s*\(.*\)\s*$/Distribution: $DISTRIBUTION/" < "$CHANGES" > "$CHANGES.new"
-mv "$CHANGES.new" "$CHANGES"
+    if [ "$MODE" = "git" ]
+    then
+        [ -n "$TESTING" ] && OPTS="$OPTS --git-ignore-new"
+        schroot -r -c "$session" -u root -- apt-get --yes install git-buildpackage
+        schroot -r -c "$session" -- git-buildpackage -uc -us $THE_OPTS
+    elif [ "$MODE" = "raw" ]
+    then
+        schroot -r -c "$session" -- dpkg-buildpackage -uc -us $THE_OPTS
+    else
+        echo "Unknown mode $MODE" >&2
+        exit 1
+    fi
 
-schroot -r -c "$session" -- lintian -I "$CHANGES" || true
+    DISTRIBUTION="`echo "$CHROOT" | sed 's/-i386//'`"
+    sed "s/^Distribution:\s*\(.*\)\s*$/Distribution: $DISTRIBUTION/" < "$CHANGES" > "$CHANGES.new"
+    mv "$CHANGES.new" "$CHANGES"
+
+    schroot -r -c "$session" -- lintian -I "$CHANGES" || true
+
+    if [ -z "$KEY" ]
+    then
+        if [ -z "$USERNAME" ]
+        then
+            debsign "$CHANGES"
+        else
+            debrsign "$USERNAME" "$CHANGES"
+        fi
+    else
+        if [ -z "$USERNAME" ]
+        then
+            debsign "-k$KEY" "$CHANGES"
+        else
+            debrsign "-k$KEY" "$USERNAME" "$CHANGES"
+        fi
+    fi
+done
 
 schroot -e -c "$session"
 trap "" EXIT TERM HUP INT QUIT
-
-if [ -z "$KEY" ]
-then
-    if [ -z "$USERNAME" ]
-    then
-        debsign "$CHANGES"
-    else
-        debrsign "$USERNAME" "$CHANGES"
-    fi
-else
-    if [ -z "$USERNAME" ]
-    then
-        debsign "-k$KEY" "$CHANGES"
-    else
-        debrsign "-k$KEY" "$USERNAME" "$CHANGES"
-    fi
-fi
 
 if [ "$SRC_DISTRIBUTION" != "$DISTRIBUTION" ]
 then
