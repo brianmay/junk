@@ -9,7 +9,7 @@ cleanup()
     exit 1
 }
 
-CHROOT=natty
+CHROOT=precise
 session=`schroot -b -c "$CHROOT"`
 trap cleanup 0 HUP INT QUIT TERM
 

@@ -53,4 +53,4 @@ then
 else
     debrsign "$USERNAME" "$NAME""_$VERSION""_source.changes"
 fi
-~/tree/junk/debian/schroot/chroot_dput ppa-natty:brian-microcomaustralia/django "$NAME""_$VERSION""_source.changes"
+~/tree/junk/debian/schroot/chroot_dput ppa-precise:brian-microcomaustralia/django "$NAME""_$VERSION""_source.changes"
