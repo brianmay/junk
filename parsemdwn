@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+import urllib2
+import argparse
+import sys
+parser = argparse.ArgumentParser(description='Process some files.')
+parser.add_argument("files", nargs="*", help="file to process")
+args = parser.parse_args()
+
+for name in args.files:
+    with open(name, 'r') as f:
+        for line in f:
+            if line[0] == '*':
+                i = 1
+                j = len(line) - 1
+
+                index = line[i:j+1].find(" - ")
+                if index != -1:
+                    j = index
+
+                index = line[i:j+1].find(" by ")
+                if index != -1:
+                    j = index
+
+                index = line[i:j+1].find("(!)")
+                if index != -1:
+                    j = index
+
+                index = line[i:j+1].find("(*)")
+                if index != -1:
+                    j = index
+
+                while line[i].isspace():
+                    i = i + 1
+                while line[j].isspace():
+                    j = j - 1
+
+                if line[i] != '[':
+                    talk = str(line[i:j+1])
+                    talk = talk.replace("(", "")
+                    talk = talk.replace(")", "")
+                    talk = talk.replace("!", "")
+                    talk = talk.replace(":", "")
+                    talk = talk.replace("/", "")
+                    talk = talk.replace("\"", "")
+                    talk = talk.replace(";", "")
+                    talk = talk.replace("'", "")
+                    talk = talk.replace(".", "")
+                    talk = talk.replace(",", "")
+                    talk = talk.replace("?", "")
+                    talk = talk.replace("&", "")
+                    talk = talk.replace("  ", "_")
+                    talk = talk.replace(" ", "_")
+
+                    url = "http://mirror.linux.org.au/linux.conf.au/2013/ogv/%s.ogv"%talk
+                    try:
+                        f = urllib2.urlopen(url)
+                        line = line[0:i] + "[%s](%s)"%(line[i:j+1], url) + line[j+1:]
+
+                    except urllib2.HTTPError:
+                        sys.stderr.write(url)
+                        sys.stderr.write("\n")
+
+            sys.stdout.write(line)
